@@ -1,0 +1,4 @@
+<plugin>
+  <name>nomorescript</name>
+  <classname>com.github.suzuki0keiichi.nomorescript.plugin.NoMoreScriptPlugin</classname>
+</plugin>

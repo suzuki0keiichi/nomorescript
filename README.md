@@ -6,6 +6,16 @@ s2jsに触発され&コンパイラープラグインを触ってみたい＆Clo
 jar分け、試験も不十分ですがしばらく趣味プログラムに時間を取れなさそうなのでコミットだけしてある状態です。
 Scala的な書き方でのご指摘、機能追加、テスト追加、不具合修正等お待ちしてます。
 
+#使いかた
+jarを作成
+
+sbt package
+
+scalacに指定して変換したいscalaファイルをコンパイル
+
+scalac -Xplugin:nomorescript.jar -P:nomorescript:d:target/js -classpath nomorescript.jar -d target/scala-2.9.1/classes hoge.scala
+
+
 #TODO
  * Map.applyのJSON変換
  * pattern matching

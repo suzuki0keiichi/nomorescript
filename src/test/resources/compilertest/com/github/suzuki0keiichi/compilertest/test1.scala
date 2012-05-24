@@ -1,4 +1,5 @@
 import nomorescriptroot.browser.window._
+import nomorescriptroot.jquery._
 import com.github.suzuki0keiichi.nomorescript.bridge._
 import com.github.suzuki0keiichi.nomorescript.annotation._
 
@@ -85,5 +86,9 @@ package com.github.suzuki0keiichi.compilertest {
         alert("childPackageClass1Def")
       }
     }
+  }
+ 
+  @global object JqueryTest {
+    $("hoge")
   }
 }

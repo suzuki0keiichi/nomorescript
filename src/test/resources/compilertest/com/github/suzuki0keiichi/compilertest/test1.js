@@ -118,3 +118,5 @@ com.github.suzuki0keiichi.compilertest.childpackage.ChildPackageClass1 = (functi
   return ChildPackageClass1;
 })();
 
+$("hoge");
+

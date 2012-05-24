@@ -1,7 +1,7 @@
 package com.github.suzuki0keiichi.nomorescript.trees
 
 case class NoMoreScriptApply(fun: NoMoreScriptTree, params: List[NoMoreScriptTree], returnValue: Boolean, isArrayApply: Boolean) extends NoMoreScriptTree {
-  val rootMatcher = "(new |)nomorescriptroot\\.[a-zA-Z0-9_]+\\.([a-zA-Z0-9_.]+)$".r
+  val rootMatcher = "(new |)nomorescriptroot\\.[a-zA-Z0-9_]+\\.([$a-zA-Z0-9_.]+)$".r
   val arrayApplyMatcher = "scala\\.(Array|Map)\\.apply".r
   val applyMatcher = "([a-zA-Z0-9_.]+)\\.apply".r
 

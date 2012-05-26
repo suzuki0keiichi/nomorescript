@@ -1,6 +1,6 @@
 organization := "com.github.suzuki0keiichi"
 
-name := "nomorescript"
+name := "nomorescript-plugin"
 
 version := "0.1.0-SNAPSHOT"
 

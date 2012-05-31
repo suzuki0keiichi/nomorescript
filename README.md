@@ -27,3 +27,4 @@ scalacに指定して変換したいscalaファイルをコンパイル
  * 到達しないコードの削除(別phaseを使っていた時の名残です)
  * object singleton対応(@globalをつければglobal(window下など)に配置することはできます
  * return対応のしょぼさ修正(;対応は変換時なのにreturnはクラス生成時などバラバラ)
+ * if文、ブロック文を値として使用する対応

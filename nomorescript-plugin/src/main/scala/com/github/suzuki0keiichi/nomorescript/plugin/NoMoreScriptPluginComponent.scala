@@ -7,7 +7,6 @@ import scala.tools.nsc.Phase
 import com.github.suzuki0keiichi.nomorescript.trees._
 
 class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin) extends PluginComponent {
-
   import global._
 
   val runsAfter: List[String] = List("refchecks")
@@ -17,12 +16,19 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
   def newPhase(prev: Phase): Phase = new NoMoreScriptPhase(prev)
 
   class NoMoreScriptPhase(prev: Phase) extends StdPhase(prev) {
+
     override def name: String = phaseName
 
     val BASE_CLASSES = List("java.lang.Object", "ScalaObject")
     val localUnit = new ThreadLocal[(CompilationUnit, Boolean)]
 
     private def addError(pos: Position, message: String) = {
+      {
+        val out2 = new java.io.FileOutputStream("/tmp/nomorescript.log")
+
+        out2.write((message + " " + pos).getBytes())
+        out2.close()
+      }
       localUnit.get()._1.error(pos, message)
       localUnit.set((localUnit.get()._1, true))
     }
@@ -38,17 +44,57 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
           if (!localUnit.get._2) {
             val file = unit.source.file.file
-            val outputDir = new java.io.File(currentDir.getAbsolutePath() + "/" + parent.outputDir + "/" + file.getParent().replaceAll("^src/[a-zA-Z0-9_]+/", ""))
+            val f = file.getParent()
+            val g = parent.srcRootDir
+            val relativePath =
+              if (file.getParent().startsWith(parent.srcRootDir)) {
+                file.getParent().substring(parent.srcRootDir.length())
+              } else {
+                file.getParent()
+              }
+
+            val outputDirRoot = {
+              val file = new java.io.File(parent.outputDir)
+
+              if (file.isAbsolute()) {
+                file.getAbsolutePath()
+              } else {
+                currentDir.getAbsolutePath() + "/" + file.getPath()
+              }
+            }
+
+            val outputDir = new java.io.File(outputDirRoot + "/" + relativePath)
+
+            val a = currentDir.getAbsolutePath()
+            val b = parent.outputDir
+            val c = file.getParent()
 
             outputDir.mkdirs()
 
-            val writer = new java.io.PrintWriter(outputDir.getPath() + "/" + file.getName().replaceAll(".scala$", ".js"), "UTF-8")
+            {
+              val out2 = new java.io.FileOutputStream("/tmp/nomorescript.log")
+
+              out2.write(("yobareta yo2").getBytes())
+              out2.close()
+            }
 
             try {
-              js.foreach(writer.println(_))
-              writer.flush()
-            } finally {
-              writer.close()
+              val writer = new java.io.PrintWriter(outputDir.getPath() + "/" + file.getName().replaceAll(".scala", "") + ".js", "UTF-8")
+              try {
+                js.foreach(writer.println(_))
+                writer.flush()
+              } finally {
+                writer.close()
+              }
+            } catch {
+              case e: Exception =>
+                {
+                  val out2 = new java.io.FileOutputStream("/tmp/nomorescript.log")
+
+                  out2.write((e.toString()).getBytes())
+                  out2.close()
+                }
+                throw e
             }
           }
 

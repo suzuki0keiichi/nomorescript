@@ -9,6 +9,13 @@ import scala.io.Source
 
 @RunWith(classOf[JUnitRunner])
 class NoMoreScriptPluginSpecification extends Specification {
+  lazy val currentPath = getClass().getResource("").getFile()
+  lazy val srcRoot = {
+    val path = getClass().getResource("").getFile()
+
+    path.substring(0, path.length() - "/com/github/suzuki0keiichi/nomorescript".length())
+  }
+
   "NoMoreScriptApply" should {
     "0 argument" in {
       NoMoreScriptApply(NoMoreScriptSelect("hogeDef", NoMoreScriptIdent("id", false)), List(), false, false).toJs(false).mkString("_") mustEqual "id.hogeDef()"
@@ -29,37 +36,45 @@ class NoMoreScriptPluginSpecification extends Specification {
 
   "total" should {
     "test1.scala" in {
-      val compiler = new TestCompiler(List("d:target/test-js"))
+      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
 
-      fileDelete("target/test-js/resources/compilertest/com/github/suzuki0keiichi/compilertest/test1.js")
-      compiler.compile("src/test/resources/compilertest/com/github/suzuki0keiichi/compilertest/test1.scala")
+      fileDelete("target/test-js/com/github/suzuki0keiichi/nomorescript/test1.txt.js")
+      compiler.compile(currentPath + "test1.scala.txt")
 
-      val src1 = Source.fromFile("target/test-js/resources/compilertest/com/github/suzuki0keiichi/compilertest/test1.js").getLines().toList
-      val src2 = Source.fromFile("src/test/resources/compilertest/com/github/suzuki0keiichi/compilertest/test1.js").getLines().toList
+      val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test1.txt.js").getLines().toList
+
+      val src2 = Source.fromFile(currentPath + "test1.js").getLines().toList
 
       src2 mustEqual src1
     }
 
     "test2.scala" in {
-      val compiler = new TestCompiler(List("d:target/test-js"))
+      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
 
-      fileDelete("target/test-js/resources/compilertest/com/github/suzuki0keiichi/compilertest/test2.js")
-      compiler.compile("src/test/resources/compilertest/com/github/suzuki0keiichi/compilertest/test2.scala")
+      fileDelete("target/test-js/com/github/suzuki0keiichi/nomorescript/test2.js")
+      compiler.compile(currentPath + "test2.scala.txt")
 
-      (new java.io.File("target/test-js/resources/compilertest/com/github/suzuki0keiichi/compilertest/test2.js")).exists() mustEqual false
+      (new java.io.File("target/test-js/com/github/suzuki0keiichi/nomorescript/test2.js")).exists() mustEqual false
     }
 
     "test3.scala" in {
-      val compiler = new TestCompiler(List("d:target/test-js"))
+      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
 
-      fileDelete("target/test-js/resources/compilertest/com/github/suzuki0keiichi/compilertest/test3.js")
-      compiler.compile("src/test/resources/compilertest/com/github/suzuki0keiichi/compilertest/test3.scala")
+      fileDelete("target/test-js/com/github/suzuki0keiichi/nomorescript/test3.txt.js")
+      compiler.compile(currentPath + "test3.scala.txt")
 
-      val src1 = Source.fromFile("target/test-js/resources/compilertest/com/github/suzuki0keiichi/compilertest/test3.js").getLines().toList
-      val src2 = Source.fromFile("src/test/resources/compilertest/com/github/suzuki0keiichi/compilertest/test3.js").getLines().toList
+      val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test3.txt.js").getLines().toList
+
+      val src2 = Source.fromFile(currentPath + "test3.js").getLines().toList
 
       src2 mustEqual src1
     }
+  }
+
+  def fileExists(name: String) = {
+    val file = new java.io.File(name)
+
+    file.exists()
   }
 
   def fileDelete(name: String) = {

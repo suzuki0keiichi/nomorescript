@@ -1,6 +1,6 @@
 import com.github.suzuki0keiichi.nomorescript.bridge.bridge._
-import nomorescriptroot.browser.window._
-import nomorescriptroot.enchantjs._
+import nomorescriptroot.browser_fortest.window._
+import nomorescriptroot.enchantjs_fortest._
 
 import com.github.suzuki0keiichi.nomorescript.annotation.global
 

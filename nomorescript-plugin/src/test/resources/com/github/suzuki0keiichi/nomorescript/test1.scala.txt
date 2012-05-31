@@ -1,5 +1,5 @@
-import nomorescriptroot.browser.window._
-import nomorescriptroot.jquery._
+import nomorescriptroot.browser_fortest.window._
+import nomorescriptroot.jquery_fortest._
 import com.github.suzuki0keiichi.nomorescript.bridge._
 import com.github.suzuki0keiichi.nomorescript.annotation._
 

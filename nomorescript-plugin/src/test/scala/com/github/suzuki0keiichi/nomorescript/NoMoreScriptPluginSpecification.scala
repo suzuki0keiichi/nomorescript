@@ -39,10 +39,15 @@ class NoMoreScriptPluginSpecification extends Specification {
       val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
 
       fileDelete("target/test-js/com/github/suzuki0keiichi/nomorescript/test1.txt.js")
-      compiler.compile(currentPath + "test1.scala.txt")
 
+      val reporter = compiler.compile(currentPath + "test1.scala.txt")
+      if (reporter.infos.size > 0) {
+        reporter.infos.head.toString mustEqual ""
+      }
+
+      reporter.hasErrors must beFalse
+      
       val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test1.txt.js").getLines().toList
-
       val src2 = Source.fromFile(currentPath + "test1.js").getLines().toList
 
       src2 mustEqual src1
@@ -52,7 +57,10 @@ class NoMoreScriptPluginSpecification extends Specification {
       val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
 
       fileDelete("target/test-js/com/github/suzuki0keiichi/nomorescript/test2.js")
-      compiler.compile(currentPath + "test2.scala.txt")
+      val reporter = compiler.compile(currentPath + "test2.scala.txt")
+
+      reporter.hasErrors must beTrue
+      reporter.infos.size mustEqual 7
 
       (new java.io.File("target/test-js/com/github/suzuki0keiichi/nomorescript/test2.js")).exists() mustEqual false
     }
@@ -61,10 +69,14 @@ class NoMoreScriptPluginSpecification extends Specification {
       val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
 
       fileDelete("target/test-js/com/github/suzuki0keiichi/nomorescript/test3.txt.js")
-      compiler.compile(currentPath + "test3.scala.txt")
+      val reporter = compiler.compile(currentPath + "test3.scala.txt")
+      if (reporter.infos.size > 0) {
+        reporter.infos.head.toString mustEqual ""
+      }
+
+      reporter.hasErrors must beFalse
 
       val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test3.txt.js").getLines().toList
-
       val src2 = Source.fromFile(currentPath + "test3.js").getLines().toList
 
       src2 mustEqual src1

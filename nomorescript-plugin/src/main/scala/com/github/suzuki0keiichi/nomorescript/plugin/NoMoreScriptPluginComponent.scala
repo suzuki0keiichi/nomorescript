@@ -23,12 +23,6 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
     val localUnit = new ThreadLocal[(CompilationUnit, Boolean)]
 
     private def addError(pos: Position, message: String) = {
-      {
-        val out2 = new java.io.FileOutputStream("/tmp/nomorescript.log")
-
-        out2.write((message + " " + pos).getBytes())
-        out2.close()
-      }
       localUnit.get()._1.error(pos, message)
       localUnit.set((localUnit.get()._1, true))
     }
@@ -387,17 +381,10 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
                   NoMoreScriptVal(b.name.toString(), NoMoreScriptIdent("_", false), false),
                   toTree(caseDef.body, returnValue, None)), false),
                 NoMoreScriptTree())
-
-            case _ =>
-              println("wakaran1 " + b.body + " " + b.body.getClass())
-              NoMoreScriptTree()
           }
 
         case i: Ident =>
           NoMoreScriptBlock(toTree(caseDef.body, returnValue, None), true)
-        case _ =>
-          println("wakaran2 " + caseDef.pat + " " + caseDef.pat.getClass())
-          NoMoreScriptTree()
       }
       //      NoMoreScriptTrees(
       //        List(toTree(caseDef.pat, false, None), toTree(caseDef.guard, false, None), toTree(caseDef.body, returnValue, None)), false)
@@ -437,10 +424,10 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
           toDef(ddef, classNameForDef, globalClass)
 
         case block: Block =>
-          val children = block.stats ::: List(block.expr)
-          val a = for (i <- 0 until children.size; tree = toTree(children(i), if (i == children.size - 1) returnValue else false, globalClass, namespace, memberNames)) yield tree
+          val children = block.stats.map(toTree(_, false, globalClass, namespace, memberNames)).toList :::
+            List(toTree(block.expr, returnValue, globalClass, namespace, memberNames))
 
-          NoMoreScriptTrees(a.toList, false)
+          NoMoreScriptTrees(children, false)
 
         case Try(block, catches, finalizer) =>
           NoMoreScriptTry(

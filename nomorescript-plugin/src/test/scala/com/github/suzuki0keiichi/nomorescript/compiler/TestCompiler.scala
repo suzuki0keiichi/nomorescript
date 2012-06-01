@@ -35,10 +35,11 @@ class TestCompiler(val options: List[String] = Nil) {
     val run = new global.Run
 
     run.compile(pathes.toList)
+    global.storeReporter
   }
 }
 
-class TestGlobal(options: List[String], settings: Settings) extends Global(settings, new StoreReporter()) {
+class TestGlobal(options: List[String], settings: Settings, val storeReporter: StoreReporter = new StoreReporter()) extends Global(settings, storeReporter) {
   lazy val plugin = new NoMoreScriptPlugin(this)
 
   plugin.processOptions(options, { message => })

@@ -65,30 +65,12 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
             outputDir.mkdirs()
 
-            {
-              val out2 = new java.io.FileOutputStream("/tmp/nomorescript.log")
-
-              out2.write(("yobareta yo2").getBytes())
-              out2.close()
-            }
-
+            val writer = new java.io.PrintWriter(outputDir.getPath() + "/" + file.getName().replaceAll(".scala", "") + ".js", "UTF-8")
             try {
-              val writer = new java.io.PrintWriter(outputDir.getPath() + "/" + file.getName().replaceAll(".scala", "") + ".js", "UTF-8")
-              try {
-                js.foreach(writer.println(_))
-                writer.flush()
-              } finally {
-                writer.close()
-              }
-            } catch {
-              case e: Exception =>
-                {
-                  val out2 = new java.io.FileOutputStream("/tmp/nomorescript.log")
-
-                  out2.write((e.toString()).getBytes())
-                  out2.close()
-                }
-                throw e
+              js.foreach(writer.println(_))
+              writer.flush()
+            } finally {
+              writer.close()
             }
           }
 
@@ -384,7 +366,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
           }
 
         case i: Ident =>
-          NoMoreScriptBlock(toTree(caseDef.body, returnValue, None), true)
+          NoMoreScriptIf(NoMoreScriptTree(), toTree(caseDef.body, returnValue, None), NoMoreScriptTree())
       }
       //      NoMoreScriptTrees(
       //        List(toTree(caseDef.pat, false, None), toTree(caseDef.guard, false, None), toTree(caseDef.body, returnValue, None)), false)
@@ -432,7 +414,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         case Try(block, catches, finalizer) =>
           NoMoreScriptTry(
             toTree(block, returnValue, globalClass, namespace, memberNames, classNameForDef),
-            catches.map(toCase(_, returnValue)),
+            NoMoreScriptCases(catches.map(toCase(_, returnValue))),
             toTree(finalizer, false, globalClass, namespace, memberNames, classNameForDef))
 
         case ifBlock: If =>

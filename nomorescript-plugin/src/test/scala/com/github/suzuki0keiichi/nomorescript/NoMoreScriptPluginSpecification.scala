@@ -46,7 +46,7 @@ class NoMoreScriptPluginSpecification extends Specification {
       }
 
       reporter.hasErrors must beFalse
-      
+
       val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test1.txt.js").getLines().toList
       val src2 = Source.fromFile(currentPath + "test1.js").getLines().toList
 

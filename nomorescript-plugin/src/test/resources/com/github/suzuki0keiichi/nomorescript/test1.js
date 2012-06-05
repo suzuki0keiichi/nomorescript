@@ -23,10 +23,8 @@ UsingTest = (function() {
       if (_ instanceof Exception) {
         var e = _;
         throw e;
-      }
-      {
+      } else {
         throw new scala.Exception();
-      
       }
     } finally {
       if (resource != null) {

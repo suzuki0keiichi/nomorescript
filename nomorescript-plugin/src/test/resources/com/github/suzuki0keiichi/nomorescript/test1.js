@@ -49,6 +49,17 @@ com.github.suzuki0keiichi.compilertest.Trait1 = (function() {
   return Trait1;
 })();
 
+com.github.suzuki0keiichi.compilertest.Trait2 = (function() {
+  function Trait2() {
+  }
+  
+  Trait2.prototype.trait2Def = function() {
+    return "trait";
+  }
+  
+  return Trait2;
+})();
+
 com.github.suzuki0keiichi.compilertest.Class1 = (function() {
   function Class1() {
     window.alert("Class1 say hello");
@@ -70,6 +81,9 @@ com.github.suzuki0keiichi.compilertest.Class1 = (function() {
   
   return Class1;
 })();
+
+mixin(com.github.suzuki0keiichi.compilertest.Class1, com.github.suzuki0keiichi.compilertest.Trait2);
+mixin(com.github.suzuki0keiichi.compilertest.Class1, com.github.suzuki0keiichi.compilertest.Trait1);
 
 com.github.suzuki0keiichi.compilertest.Class2 = (function() {
   function Class2(val1, var1) {

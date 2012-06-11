@@ -34,7 +34,11 @@ package com.github.suzuki0keiichi.compilertest {
     def trait1Def() = "trait"
   }
 
-  class Class1 extends Trait1 {
+  trait Trait2 {
+    def trait2Def() = "trait"
+  }
+
+  class Class1 extends Trait1 with Trait2 {
     alert("Class1 say hello")
 
     def class1Def(param1: Int, param2: String) = {

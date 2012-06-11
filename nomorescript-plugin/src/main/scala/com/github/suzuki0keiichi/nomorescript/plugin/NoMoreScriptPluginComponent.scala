@@ -106,7 +106,9 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
         val name = cdef.name.toString().trim()
 
-        NoMoreScriptClass(name, namespace, toConstructor(cdef, globalClass, namespace), cdef.impl.body.collect {
+        NoMoreScriptClass(name, namespace, toConstructor(cdef, globalClass, namespace), cdef.impl.parents.collect{
+          case t: Tree if (!BASE_CLASSES.contains(t.toString())) => t.toString()
+        }, cdef.impl.body.collect {
           case ddef: DefDef => toTree(ddef, false, globalClass, namespace, Nil, Some(name))
         })
       }

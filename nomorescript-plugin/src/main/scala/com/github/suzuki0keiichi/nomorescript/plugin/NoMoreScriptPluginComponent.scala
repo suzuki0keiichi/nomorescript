@@ -3,8 +3,8 @@ package com.github.suzuki0keiichi.nomorescript.plugin
 import scala.tools.nsc.plugins.PluginComponent
 import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
-
 import com.github.suzuki0keiichi.nomorescript.trees._
+import java.io.IOException
 
 class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin) extends PluginComponent {
   import global._
@@ -37,38 +37,13 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
           val js = toPackage(pdef, None).toJs(false)
 
           if (!localUnit.get._2) {
-            val file = unit.source.file.file
-            val f = file.getParent()
-            val g = parent.srcRootDir
-            val relativePath =
-              if (file.getParent().startsWith(parent.srcRootDir)) {
-                file.getParent().substring(parent.srcRootDir.length())
-              } else {
-                file.getParent()
-              }
+            val writer = createWriter(currentDir, unit)
 
-            val outputDirRoot = {
-              val file = new java.io.File(parent.outputDir)
-
-              if (file.isAbsolute()) {
-                file.getAbsolutePath()
-              } else {
-                currentDir.getAbsolutePath() + "/" + file.getPath()
-              }
-            }
-
-            val outputDir = new java.io.File(outputDirRoot + "/" + relativePath)
-
-            val a = currentDir.getAbsolutePath()
-            val b = parent.outputDir
-            val c = file.getParent()
-
-            outputDir.mkdirs()
-
-            val writer = new java.io.PrintWriter(outputDir.getPath() + "/" + file.getName().replaceAll(".scala", "") + ".js", "UTF-8")
             try {
               js.foreach(writer.println(_))
               writer.flush()
+            } catch {
+              case e: IOException => addError(NoPosition, e.getMessage())
             } finally {
               writer.close()
             }
@@ -77,6 +52,32 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         case t: Tree =>
           unit.error(t.pos, "not supported " + t.getClass())
       }
+    }
+
+    private def createWriter(currentDir: java.io.File, unit: CompilationUnit) = {
+      val file = unit.source.file.file
+      val relativePath =
+        if (file.getParent().startsWith(parent.srcRootDir)) {
+          file.getParent().substring(parent.srcRootDir.length())
+        } else {
+          file.getParent()
+        }
+
+      val outputDirRoot = {
+        val file = new java.io.File(parent.outputDir)
+
+        if (file.isAbsolute()) {
+          file.getAbsolutePath()
+        } else {
+          currentDir.getAbsolutePath() + "/" + file.getPath()
+        }
+      }
+
+      val outputDir = new java.io.File(outputDirRoot + "/" + relativePath)
+
+      outputDir.mkdirs()
+
+      new java.io.PrintWriter(outputDir.getPath() + "/" + file.getName().replaceAll(".scala", "") + ".js", "UTF-8")
     }
 
     def toPackage(pdef: PackageDef, parentPackageName: Option[String]) = {
@@ -106,7 +107,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
         val name = cdef.name.toString().trim()
 
-        NoMoreScriptClass(name, namespace, toConstructor(cdef, globalClass, namespace), cdef.impl.parents.collect{
+        NoMoreScriptClass(name, namespace, toConstructor(cdef, globalClass, namespace), cdef.impl.parents.collect {
           case t: Tree if (!BASE_CLASSES.contains(t.toString())) => t.toString()
         }, cdef.impl.body.collect {
           case ddef: DefDef => toTree(ddef, false, globalClass, namespace, Nil, Some(name))

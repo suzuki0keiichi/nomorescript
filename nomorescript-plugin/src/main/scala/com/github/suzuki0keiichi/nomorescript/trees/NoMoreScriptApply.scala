@@ -53,4 +53,22 @@ case class NoMoreScriptApply(fun: NoMoreScriptTree, params: List[NoMoreScriptTre
       Util.addLast(childJs2, "(" + paramCsString + ")" + (if (terminate) ";" else ""))
     }
   }
+
+  def toSuperConstructorApply() = {
+    NoMoreScriptSuperConstructorApply(fun, params)
+  }
+}
+
+case class NoMoreScriptSuperConstructorApply(fun: NoMoreScriptTree, params: List[NoMoreScriptTree]) extends NoMoreScriptTree {
+  override def toJs(terminate: Boolean) = {
+    val paramCsString = if (params.isEmpty) {
+      "this"
+    } else {
+      val thisJs = "this" :: params.flatMap(_.toJs(false))
+
+      thisJs.reduceLeft(_ + ", " + _)
+    }
+
+    Util.addLast(fun.toJs(false), ".call(" + paramCsString + ")" + (if (terminate) ";" else ""))
+  }
 }

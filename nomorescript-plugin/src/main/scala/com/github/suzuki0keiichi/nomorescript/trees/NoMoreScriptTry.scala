@@ -6,7 +6,7 @@ case class NoMoreScriptTry(block: NoMoreScriptTree, catcheBlock: NoMoreScriptCas
       block.toJs(true).map("  " + _) :::
       (catcheBlock.toJs(true).map("  " + _) match {
         case Nil => Nil
-        case js: List[String] => "} catch (_) {" :: js
+        case js: List[String] => "} catch (__match_target__) {" :: js
       }) :::
       (finallyBlock.toJs(true) match {
         case Nil => Nil

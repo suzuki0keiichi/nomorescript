@@ -3,9 +3,9 @@ package com.github.suzuki0keiichi.nomorescript
 import org.specs2.mutable.Specification
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
-import trees._
 import compiler.TestCompiler
 import scala.io.Source
+import trees._
 
 @RunWith(classOf[JUnitRunner])
 class NoMoreScriptPluginSpecification extends Specification {
@@ -80,6 +80,19 @@ class NoMoreScriptPluginSpecification extends Specification {
       val src2 = Source.fromFile(currentPath + "test3.js").getLines().toList
 
       src2 mustEqual src1
+    }
+    
+    "test4.scala" in {
+      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
+
+      val reporter = compiler.compile(currentPath + "test4.scala.txt")
+      if (reporter.infos.size > 0) {
+        reporter.infos.head.toString mustEqual ""
+      }
+
+      reporter.hasErrors must beFalse
+
+      true
     }
   }
 

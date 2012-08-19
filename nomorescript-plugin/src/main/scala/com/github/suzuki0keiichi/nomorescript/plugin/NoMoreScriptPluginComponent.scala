@@ -1,10 +1,12 @@
 package com.github.suzuki0keiichi.nomorescript.plugin
 
+import java.io.IOException
+
 import scala.tools.nsc.plugins.PluginComponent
 import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
+
 import com.github.suzuki0keiichi.nomorescript.trees._
-import java.io.IOException
 
 class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin) extends PluginComponent {
   import global._
@@ -19,7 +21,8 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
     override def name: String = phaseName
 
-    val BASE_CLASSES = List("java.lang.Object", "ScalaObject")
+    val BASE_CLASSES = List("java.lang.Object", "ScalaObject", "Product", "Serializable", "Object")
+    val PRIMITIVE_TYPES = Map("Int" -> "number", "String" -> "string", "Any" -> "Object")
     val localUnit = new ThreadLocal[(CompilationUnit, Boolean)]
 
     private def addError(pos: Position, message: String) = {
@@ -87,11 +90,11 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       } else {
         val namespace = parentPackageName.map(_ + ".").getOrElse("") + pdef.pid.toString()
 
-        NoMoreScriptNamespace(namespace, pdef.stats.map(toTree(_, false, None, Some(namespace), Nil)))
+        NoMoreScriptNamespace(namespace, pdef.stats.map(toTree(_, false, Some(namespace))))
       }
     }
 
-    def toClass(cdef: ClassDef, globalClass: Option[String], namespace: Option[String]): NoMoreScriptTree = {
+    def toClass(cdef: ClassDef, namespace: Option[String]): NoMoreScriptTree = {
       if (cdef.mods.hasModuleFlag) {
         toModule(cdef)
       } else {
@@ -106,19 +109,55 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         }
 
         val name = cdef.name.toString().trim()
+        val isTrait = cdef.impl.tpe.typeSymbol.isTrait
+        
+        val parent: Option[String] = cdef.impl.parents.collectFirst {
+          case t: Ident if (!BASE_CLASSES.contains(t.toString()) && !t.tpe.typeSymbol.isTrait) => 
+            val packageName = t.symbol.owner.name.toString()
+            
+            (if (packageName == "<empty>") "" else packageName + ".") + t.toString()
+        }
 
-        NoMoreScriptClass(name, namespace, toConstructor(cdef, globalClass, namespace), cdef.impl.parents.collect {
-          case t: Tree if (!BASE_CLASSES.contains(t.toString())) => t.toString()
-        }, cdef.impl.body.collect {
-          case ddef: DefDef => toTree(ddef, false, globalClass, namespace, Nil, Some(name))
-        })
+        // TODO:これだと親の親が取れない(JsDocでinterfaceは継承できないと思うので)
+        val traits: List[String] = cdef.impl.parents.collect {
+          case t: TypeTree if (!BASE_CLASSES.contains(t.toString()) && t.tpe.typeSymbol.isTrait) => t.toString()
+        }
+
+        // TODO:これだとまだ親の親で実装されている関数が取れない
+        val implementedTraitMethods: Map[String, List[String]] =
+          cdef.impl.parents.collect {
+            case t: TypeTree if (!BASE_CLASSES.contains(t.toString()) && t.tpe.typeSymbol.isTrait) =>
+              t.toString() -> t.tpe.members.collect {
+                case m: MethodSymbol if (t.toString() == m.enclClass.tpe.toString() && !m.name.toString().startsWith("$")) => m.name.toString()
+              }
+          }.toMap
+
+        val members = Map[String, String]()
+        val children = Map[String, NoMoreScriptTree]()
+
+        if (isTrait) {
+          NoMoreScriptTrait(name, namespace, toConstructor(cdef, namespace),
+            cdef.impl.body.collect {
+              case ddef: DefDef => ddef.name.toString() -> toTree(ddef, false, namespace)
+            }.toMap)
+        } else {
+          NoMoreScriptClass(name, namespace, toConstructor(cdef, namespace), parent, traits,
+            implementedTraitMethods,
+            members,
+            cdef.impl.body.collect {
+              case ddef: DefDef => ddef.name.toString() -> toTree(ddef, false, namespace, Nil)
+            }.toMap)
+        }
       }
     }
 
     def toModule(cdef: ClassDef) = {
       val global = cdef.symbol.annotations.exists(a => a.toString() == "com.github.suzuki0keiichi.nomorescript.annotation.global")
+      val mock = cdef.symbol.annotations.exists(a => a.toString() == "com.github.suzuki0keiichi.nomorescript.annotation.mock")
 
-      if (global) {
+      if (mock) {
+        NoMoreScriptTree()
+      } else if (global) {
         NoMoreScriptTrees(cdef.impl.body.map(toTree(_, false, Some(cdef.name.toString()))), true)
       } else {
         addError(cdef.pos, "singleton class is not supported")
@@ -146,29 +185,44 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       }
     }
 
-    def toConstructor(cdef: ClassDef, globalClass: Option[String], namespace: Option[String]) = {
-      /*
-      findConstructor(cdef) match {
-        case Some(ddef) => NoMoreScriptConstructor(cdef.toString(), ddef.vparamss.flatMap(_.map(_.name.toString().trim())), List(toTree(ddef.rhs, false, None)))
-        case _ => NoMoreScriptConstructor(cdef.toString().trim(), Nil, Nil)
-      }
-      */
-      val params: List[String] = cdef.impl.body.collectFirst {
-        case ddef: DefDef if (ddef.name.toString().trim() == "<init>") => ddef.vparamss.flatMap(_.map(_.name.toString().trim()))
-      }.getOrElse(Nil)
+    def toParameterNames(params: List[ValDef]) = {
+      params.map(param => 
+        param.name.toString() -> toPrimitiveType(param.symbol.tpe.toString())
+      )
+    }
+
+    def toConstructor(cdef: ClassDef, namespace: Option[String]) = {
+      val params: Map[String, String] = cdef.impl.body.collectFirst {
+        case ddef: DefDef if (ddef.name.toString().trim() == "<init>") => ddef.vparamss.flatMap(toParameterNames(_)).toMap
+      }.getOrElse(Map[String, String]())
 
       val memberNames = cdef.impl.body.collect {
         case ddef: DefDef if (ddef.mods.hasAccessorFlag) => ddef.name.toString().trim()
       }
 
+      val callSuperClass = cdef.impl.body.collectFirst {
+        case ddef: DefDef if (ddef.name.toString() == "<init>" && !BASE_CLASSES.contains(ddef.symbol.enclClass.superClass.name.toString())) =>
+          ddef.rhs match {
+            case b: Block => b.stats.collect {
+              case aply: Apply =>
+                toTree(aply, false, namespace, memberNames) match {
+                  case aply: NoMoreScriptApply => aply.toSuperConstructorApply()
+                  case _ => NoMoreScriptTree()
+                }
+            }
+
+            case _ => Nil
+          }
+      }.getOrElse(Nil)
+
       val bodies = cdef.impl.body.filter {
         case ddef: DefDef => false
         case tree: Tree => true
-      }.map(toTree(_, false, globalClass, namespace, memberNames))
+      }.map(toTree(_, false, namespace, memberNames))
 
       val name = cdef.name.toString().trim()
 
-      NoMoreScriptConstructor(name, params, bodies)
+      NoMoreScriptConstructor(name, params, callSuperClass ::: bodies)
     }
 
     def isAnonFun(ddef: DefDef): Boolean = {
@@ -179,16 +233,16 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       name.startsWith("$anonfun$")
     }
 
-    def toAnonFun(cdef: ClassDef, globalClass: Option[String]) = {
+    def toAnonFun(cdef: ClassDef) = {
       cdef.impl.body.collectFirst {
         case ddef: DefDef if (ddef.tpt.toString() == "Unit") => ddef
       } match {
-        case Some(ddef) => NoMoreScriptJsFunction(ddef.vparamss(0).map(_.name.toString()), toTree(ddef.rhs, ddef.tpt.toString() != "Unit", globalClass))
+        case Some(ddef) => NoMoreScriptJsFunction(toParameterNames(ddef.vparamss(0)).toMap, toTree(ddef.rhs, ddef.tpt.toString() != "Unit"))
         case _ => NoMoreScriptTree()
       }
     }
 
-    def toVal(vdef: ValDef, memberNames: List[String], globalClass: Option[String]) = {
+    def toVal(vdef: ValDef, memberNames: List[String]) = {
       val name = vdef.name.toString().trim()
       val isMember = memberNames.contains(name)
 
@@ -199,15 +253,15 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
           NoMoreScriptTree()
         }
       } else {
-        NoMoreScriptVal(name, toTree(vdef.rhs, false, globalClass), isMember)
+        NoMoreScriptVal(name, toTree(vdef.rhs, false), isMember)
       }
     }
 
-    def toSelect(select: Select, returnValue: Boolean, globalClass: Option[String]) = {
+    def toSelect(select: Select, returnValue: Boolean) = {
       if (select.name.toString() == "package") {
-        toTree(select.qualifier, returnValue, globalClass)
+        toTree(select.qualifier, returnValue)
       } else {
-        NoMoreScriptSelect(select.name.toString(), toTree(select.qualifier, returnValue, globalClass: Option[String]))
+        NoMoreScriptSelect(select.name.toString(), toTree(select.qualifier, returnValue))
       }
     }
 
@@ -220,9 +274,9 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       }
     }
 
-    def toGetter(aply: Apply, returnValue: Boolean, globalClass: Option[String]) = {
+    def toGetter(aply: Apply, returnValue: Boolean) = {
       aply.fun match {
-        case select: Select if (aply.symbol.hasAccessorFlag) => Some(toSelect(select, returnValue, globalClass))
+        case select: Select if (aply.symbol.hasAccessorFlag) => Some(toSelect(select, returnValue))
         case _ => None
       }
     }
@@ -257,62 +311,82 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       }
     }
 
-    def toApply(aply: Apply, returnValue: Boolean, globalClass: Option[String]) = {
+    def toApply(aply: Apply, returnValue: Boolean) = {
       aply.fun match {
         case select: Select if (select.name.toString() == "$isInstanceOf") =>
-          NoMoreScriptInstanceOf(toTree(select.qualifier, returnValue, globalClass), aply.args(0).toString())
+          NoMoreScriptInstanceOf(toTree(select.qualifier, returnValue), aply.args(0).toString())
 
         case typeApply: TypeApply =>
-          toTypeApply(typeApply, returnValue, globalClass)
+          toTypeApply(typeApply, returnValue)
 
         case select: Select =>
           toSetter(aply) match {
             case Some(setter) =>
-              NoMoreScriptSetter(setter, toTree(aply.fun.asInstanceOf[Select].qualifier, false, None, globalClass), toTree(aply.args(0), false, globalClass))
+              NoMoreScriptSetter(setter, toTree(aply.fun.asInstanceOf[Select].qualifier, false, None), toTree(aply.args(0), false))
 
             case None =>
-              toGetter(aply, returnValue, globalClass) match {
+              toGetter(aply, returnValue) match {
                 case Some(getter) => getter
                 case None =>
                   toOperator(aply) match {
                     case Some(operator) =>
-                      NoMoreScriptOperator(operator, toTree(aply.fun.asInstanceOf[Select].qualifier, false, None, globalClass), toTree(aply.args(0), false, globalClass), returnValue)
+                      NoMoreScriptOperator(operator, toTree(aply.fun.asInstanceOf[Select].qualifier, false, None), toTree(aply.args(0), false), returnValue)
 
                     case None =>
-                      val params = aply.args.map(toTree(_, false, None, globalClass))
+                      val params = aply.args.map(toTree(_, false, None))
 
-                      NoMoreScriptApply(toSelect(select, false, globalClass), params, returnValue, isArrayApply(aply))
+                      NoMoreScriptApply(toSelect(select, false), params, returnValue, isArrayApply(aply))
                   }
               }
           }
 
         case _ =>
-          val params = aply.args.map(toTree(_, false, None, globalClass))
+          val params = aply.args.map(toTree(_, false, None))
 
-          NoMoreScriptApply(toTree(aply.fun, false, None, globalClass), params, returnValue, isArrayApply(aply))
+          NoMoreScriptApply(toTree(aply.fun, false, None), params, returnValue, isArrayApply(aply))
       }
     }
 
-    def toTypeApply(aply: TypeApply, returnValue: Boolean, globalClass: Option[String]) = {
+    def toTypeApply(aply: TypeApply, returnValue: Boolean) = {
       aply.fun match {
         case select: Select if (select.name.toString() == "$asInstanceOf") =>
-          toTree(select.qualifier, returnValue, globalClass)
+          toTree(select.qualifier, returnValue)
 
         case _ =>
           NoMoreScriptTree()
       }
     }
 
-    def toDef(ddef: DefDef, classNameForDef: Option[String], globalClass: Option[String]) = {
-      globalClass match {
-        case Some(globalClassName) if (ddef.name.toString().trim() == globalClassName) =>
-          toTree(ddef.rhs, false, globalClass)
+    def toPrimitiveType(typeName: String) = {
+      PRIMITIVE_TYPES.get(typeName).getOrElse(typeName)
+    }
 
-        case Some(globalClassName) if (classNameForDef == globalClassName) =>
-          NoMoreScriptDef(ddef.name.toString(), ddef.vparamss.flatMap(_.map(_.name.toString())), toTree(ddef.rhs, ddef.tpt.toString() != "Unit", globalClass), None)
-
-        case _ =>
-          NoMoreScriptDef(ddef.name.toString(), ddef.vparamss.flatMap(_.map(_.name.toString())), toTree(ddef.rhs, ddef.tpt.toString() != "Unit", globalClass), classNameForDef)
+    def toDef(ddef: DefDef) = {
+      val packageName = ddef.symbol.owner.owner.name.toString()
+      val className = (if (packageName == "<empty>") "" else packageName + ".") + ddef.symbol.owner.name
+   
+      if (ddef.symbol.owner.tpe.typeSymbol.annotations.exists(_.toString() == "com.github.suzuki0keiichi.nomorescript.annotation.global")) {
+        if (ddef.name.toString() == ddef.tpe.typeSymbol.enclClass.toString()) {
+          toTree(ddef.rhs, false)
+        } else {
+          NoMoreScriptDef(
+            ddef.name.toString(),
+            ddef.vparamss.flatMap(toParameterNames(_)).toMap,
+            toTree(ddef.rhs, ddef.tpt.toString() != "Unit"),
+            None)
+        }
+      } else if (ddef.symbol.enclClass.isTrait) {
+        NoMoreScriptTraitDef(
+          ddef.name.toString(),
+          ddef.vparamss.flatMap(toParameterNames(_)).toMap,
+          toTree(ddef.rhs, ddef.tpt.toString() != "Unit"),
+          className)
+      } else {
+        NoMoreScriptDef(
+          ddef.name.toString(), 
+          ddef.vparamss.flatMap(toParameterNames(_)).toMap, 
+          toTree(ddef.rhs, ddef.tpt.toString() != "Unit"), 
+          Some(className))
       }
     }
 
@@ -320,15 +394,25 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       NoMoreScriptNew(toTree(nw.tpt, false, None))
     }
 
-    def toThis(ths: This, returnValue: Boolean, globalClass: Option[String] = None) = {
-      globalClass match {
-        case Some(globalClassName) if (ths.qual.toString() == globalClassName) => NoMoreScriptTree()
-        case _ =>
-          NoMoreScriptThis(returnValue)
+    def toThis(ths: This, returnValue: Boolean) = {
+      if (isGlobal(ths)) {
+        NoMoreScriptTree()
+      } else {
+        NoMoreScriptThis(returnValue)
       }
     }
 
-    def toIdent(ident: Ident, returnValue: Boolean) = NoMoreScriptIdent(ident.name.toString(), returnValue)
+    def isGlobal(tree: Tree): Boolean = {
+      tree.tpe.typeSymbol.annotations.exists(_.toString() == "com.github.suzuki0keiichi.nomorescript.annotation.global")
+    }
+
+    def toIdent(ident: Ident, returnValue: Boolean) = {
+      if (isGlobal(ident)) {
+        NoMoreScriptTree()
+      } else {
+        NoMoreScriptIdent(ident.name.toString(), returnValue)
+      }
+    }
 
     def findClass(name: String): Option[ClassDef] = {
       findClass(name, localUnit.get._1.body)
@@ -361,9 +445,9 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
           b.body match {
             case t: Typed =>
               NoMoreScriptIf(
-                NoMoreScriptInstanceOf(NoMoreScriptIdent("_", false), t.tpt.toString()),
+                NoMoreScriptInstanceOf(NoMoreScriptIdent("__match_target__", false), t.tpt.toString()),
                 NoMoreScriptTrees(List(
-                  NoMoreScriptVal(b.name.toString(), NoMoreScriptIdent("_", false), false),
+                  NoMoreScriptVal(b.name.toString(), NoMoreScriptIdent("__match_target__", false), false),
                   toTree(caseDef.body, returnValue, None)), false),
                 NoMoreScriptTree())
           }
@@ -375,24 +459,26 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       //        List(toTree(caseDef.pat, false, None), toTree(caseDef.guard, false, None), toTree(caseDef.body, returnValue, None)), false)
     }
 
-    def toTree(tree: Tree, returnValue: Boolean, globalClass: Option[String], namespace: Option[String] = None, memberNames: List[String] = Nil, classNameForDef: Option[String] = None): NoMoreScriptTree = {
+    def toTree(tree: Tree, returnValue: Boolean, namespace: Option[String] = None, memberNames: List[String] = Nil): NoMoreScriptTree = {
       tree match {
-        case ths: This => toThis(ths, returnValue, globalClass)
+        case ths: This => toThis(ths, returnValue)
         case pdef: PackageDef => toPackage(pdef, namespace)
-        case cdef: ClassDef if (!isAnonFun(cdef.name.toString())) => toClass(cdef, globalClass, namespace)
-        case vdef: ValDef => toVal(vdef, memberNames, globalClass)
-        case select: Select => toSelect(select, returnValue, globalClass)
+        case cdef: ClassDef if (!isAnonFun(cdef.name.toString())) => toClass(cdef, namespace)
+        case vdef: ValDef => toVal(vdef, memberNames)
+        case select: Select => toSelect(select, returnValue)
         case ident: Ident => toIdent(ident, returnValue)
         case nw: New => toNew(nw, returnValue)
+        case sper: Super if (!BASE_CLASSES.contains(sper.symbol.superClass.name.toString())) =>
+          NoMoreScriptSuper(toTree(sper.qual, returnValue, namespace, memberNames))
 
         case aplyImplicit: ApplyImplicitView if (aplyImplicit.fun.toString().startsWith("com.github.suzuki0keiichi.nomorescript.bridge.bridge.toJsFunction")) =>
           aplyImplicit.args(0) match {
             case fun: Function =>
-              NoMoreScriptJsFunction(fun.vparams.map(_.name.toString()), toTree(fun.body, false, globalClass))
+              NoMoreScriptJsFunction(toParameterNames(fun.vparams).toMap, toTree(fun.body, false))
 
             case Block(_, Typed(Apply(Select(New(className), _), _), _)) if (className.toString.startsWith("anonymous class ")) =>
               findClass(className.toString.substring("anonymous class ".length)) match {
-                case Some(cdef) => toAnonFun(cdef, globalClass)
+                case Some(cdef) => toAnonFun(cdef)
 
                 case _ =>
                   addError(aplyImplicit.pos, "unknown error")
@@ -403,25 +489,25 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
               NoMoreScriptTree()
           }
 
-        case aply: Apply => toApply(aply, returnValue, globalClass)
+        case aply: Apply => toApply(aply, returnValue)
 
         case ddef: DefDef if (ddef.name.toString() != "<init>" && ddef.name.toString() != "$init$" && !ddef.mods.hasAccessorFlag) =>
-          toDef(ddef, classNameForDef, globalClass)
+          toDef(ddef)
 
         case block: Block =>
-          val children = block.stats.map(toTree(_, false, globalClass, namespace, memberNames)).toList :::
-            List(toTree(block.expr, returnValue, globalClass, namespace, memberNames))
+          val children = block.stats.map(toTree(_, false, namespace, memberNames)).toList :::
+            List(toTree(block.expr, returnValue, namespace, memberNames))
 
           NoMoreScriptTrees(children, false)
 
         case Try(block, catches, finalizer) =>
           NoMoreScriptTry(
-            toTree(block, returnValue, globalClass, namespace, memberNames, classNameForDef),
+            toTree(block, returnValue, namespace, memberNames),
             NoMoreScriptCases(catches.map(toCase(_, returnValue))),
-            toTree(finalizer, false, globalClass, namespace, memberNames, classNameForDef))
+            toTree(finalizer, false, namespace, memberNames))
 
         case ifBlock: If =>
-          NoMoreScriptIf(toTree(ifBlock.cond, false, globalClass), toTree(ifBlock.thenp, returnValue, globalClass), toTree(ifBlock.elsep, returnValue, globalClass))
+          NoMoreScriptIf(toTree(ifBlock.cond, false), toTree(ifBlock.thenp, returnValue), toTree(ifBlock.elsep, returnValue))
 
         case literal: Literal =>
           literal.value.value match {

@@ -81,7 +81,7 @@ class NoMoreScriptPluginSpecification extends Specification {
 
       src2 mustEqual src1
     }
-    
+
     "test4.scala" in {
       val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
 

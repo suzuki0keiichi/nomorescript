@@ -1,23 +1,23 @@
 enchant();
 var CHARA_IMAGE_NAME = "http://enchantjs.com/assets/images/chara1.gif";
 window.onload = function () {
-  var window = this;
-  var game = new Game();
-  game.preload(this.CHARA_IMAGE_NAME);
+  var (window,AnyRef) = this;
+  var game = (new nomorescriptroot.enchantjs_fortest.Game()).__new__();
+  game.preload(CHARA_IMAGE_NAME);
   game.onload = function () {
-    var game = this;
+    var (game,nomorescriptroot.enchantjs_fortest.Game) = this;
     var scene = game.rootScene;
     scene.backgroundColor = "black";
-    var sprite = new Sprite(32, 32);
+    var sprite = (new nomorescriptroot.enchantjs_fortest.Sprite()).__new__(32, 32);
     sprite.moveTo(0, 100);
-    sprite.image = game.assets[this.CHARA_IMAGE_NAME];
+    sprite.image = game.assets[CHARA_IMAGE_NAME];
     scene.addChild(sprite);
     var PLAYER_MOVE_RANGE = game.width - sprite.width;
     var frameList = [0, 1, 2];
     sprite.frameIndex = 0;
     sprite.vx = 4;
     sprite.onenterframe = function () {
-      var sprite = this;
+      var (sprite,nomorescriptroot.enchantjs_fortest.Sprite) = this;
       sprite.x = sprite.x + sprite.vx;
       if (game.frame % 2 == 0) {
         sprite.frameIndex = sprite.frameIndex + 1;
@@ -39,4 +39,3 @@ window.onload = function () {
   };
   game.start();
 };
-

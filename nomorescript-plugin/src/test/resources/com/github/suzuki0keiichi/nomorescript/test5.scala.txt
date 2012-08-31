@@ -1,0 +1,50 @@
+package com.github.suzuki0keiichi.nomorescript
+
+import com.github.suzuki0keiichi.nomorescript.annotation.global
+import com.github.suzuki0keiichi.nomorescript.annotation.mock
+
+@mock class Console {
+  def log(message: String) = {}
+}
+
+@mock class GlobalBase {
+  def console: Console = null
+}
+
+@global @mock object Global extends GlobalBase {
+}
+
+import Global._
+
+@global object GlobalObject1 {
+  console.log("1 GlobalObject1 created")
+}
+
+trait Trait1 {
+  console.log("2 Trait1 constructor called")
+
+  def callTrait1() = {
+    console.log("5 Trait1.callTrait1 called")
+  }
+}
+
+class Class1 {
+  console.log("3 Class1 constructor called")
+}
+
+class Class2(val message: String) extends Class1 with Trait1 {
+  console.log(message)
+  callTrait1()
+
+  def callClass2(num: Int)(func: (String => String)) = {
+    console.log("" + num + " " + func("Class2.callClass2"))
+  }
+}
+
+@global object GlobalObject2 {
+  val c = new Class2("4 Class2 constructor")
+
+  c.callClass2(6) { message =>
+    message + " called"
+  }
+}

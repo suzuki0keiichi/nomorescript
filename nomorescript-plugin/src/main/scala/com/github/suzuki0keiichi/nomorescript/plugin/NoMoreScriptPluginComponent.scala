@@ -16,10 +16,11 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
   val phaseName: String = "scala to javascript convert phase"
 
-  def newPhase(prev: Phase): Phase = new NoMoreScriptPhase(prev)
+  def newPhase(prev: Phase) = {
+    new NoMoreScriptPhase(prev)
+  }
 
   class NoMoreScriptPhase(prev: Phase) extends StdPhase(prev) {
-
     override def name: String = phaseName
 
     val BASE_CLASSES = List("java.lang.Object", "ScalaObject", "Product", "Serializable", "Object")
@@ -99,7 +100,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       if (symbol.isRoot || symbol.name.toString == "<empty>") {
         if (child == null) None else Some(child)
       } else {
-        getPackageName(symbol.owner, if (child == null) symbol.name.toString else child + "." + symbol.name.toString)
+        getPackageName(symbol.owner, if (child == null) symbol.name.toString else symbol.name.toString + "." + child)
       }
     }
 
@@ -110,11 +111,11 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         if (!isSupportedConstructor(cdef)) {
           addError(cdef.pos, "multi constructor is not supported")
 
-          return NoMoreScriptTree()
+          return NoMoreScriptEmpty()
         }
 
         if (haveAnnotation(cdef, "com.github.suzuki0keiichi.nomorescript.annotation.mock")) {
-          return NoMoreScriptTree()
+          return NoMoreScriptEmpty()
         }
 
         val name = cdef.name.toString.trim()
@@ -165,7 +166,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       }
     }
 
-    def haveAnnotation(cdef: ClassDef, name: String) = {
+    def haveAnnotation(cdef: ClassDef, name: String): Boolean = {
       cdef.symbol.annotations.exists {
         a: AnnotationInfo => a.toString == name
       }
@@ -176,12 +177,12 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       val mock = haveAnnotation(cdef, "com.github.suzuki0keiichi.nomorescript.annotation.mock")
 
       if (mock) {
-        NoMoreScriptTree()
+        NoMoreScriptEmpty()
       } else if (global) {
         NoMoreScriptTrees(cdef.impl.body.map(toTree(_, false, Some(cdef.name.toString))), true)
       } else {
         addError(cdef.pos, "singleton class is not supported")
-        NoMoreScriptTree()
+        NoMoreScriptEmpty()
       }
     }
 
@@ -226,7 +227,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
               case aply: Apply =>
                 toTree(aply, false, namespace, memberNames) match {
                   case aply: NoMoreScriptApply => aply.toSuperConstructorApply()
-                  case _ => NoMoreScriptTree()
+                  case _ => NoMoreScriptEmpty()
                 }
             }
 
@@ -259,8 +260,8 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       cdef.impl.body.collectFirst {
         case ddef: DefDef if (ddef.tpt.toString == "Unit") => ddef
       } match {
-        case Some(ddef) => NoMoreScriptJsFunction(toParameterNames(ddef.vparamss(0)).toMap, toTree(ddef.rhs, ddef.tpt.toString != "Unit"))
-        case _ => NoMoreScriptTree()
+        case Some(ddef) => NoMoreScriptJsFunction(None, toParameterNames(ddef.vparamss(0)).toMap, toTree(ddef.rhs, ddef.tpt.toString != "Unit"))
+        case _ => NoMoreScriptEmpty()
       }
     }
 
@@ -272,7 +273,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         if (isMember) {
           NoMoreScriptVal(name, NoMoreScriptIdent(name, false), isMember)
         } else {
-          NoMoreScriptTree()
+          NoMoreScriptEmpty()
         }
       } else {
         NoMoreScriptVal(name, toTree(vdef.rhs, false), isMember)
@@ -375,7 +376,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
           toTree(select.qualifier, returnValue)
 
         case _ =>
-          NoMoreScriptTree()
+          NoMoreScriptEmpty()
       }
     }
 
@@ -420,7 +421,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
     def toThis(ths: This, returnValue: Boolean) = {
       if (isGlobal(ths)) {
-        NoMoreScriptTree()
+        NoMoreScriptEmpty()
       } else {
         NoMoreScriptThis(returnValue)
       }
@@ -432,9 +433,18 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
     def toIdent(ident: Ident, returnValue: Boolean) = {
       if (isGlobal(ident)) {
-        NoMoreScriptTree()
+        NoMoreScriptEmpty()
       } else {
-        NoMoreScriptIdent(ident.name.toString, returnValue)
+        val name = if (ident.symbol.isClass) {
+          getPackageName(ident.symbol.owner, null) match {
+            case Some(packageName) => packageName + "." + ident.name
+            case None => ident.name.toString()
+          }
+        } else {
+          ident.name.toString()
+        }
+
+        NoMoreScriptIdent(name, returnValue)
       }
     }
 
@@ -473,11 +483,11 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
                 NoMoreScriptTrees(List(
                   NoMoreScriptVal(b.name.toString, NoMoreScriptIdent("__match_target__", false), false),
                   toTree(caseDef.body, returnValue, None)), false),
-                NoMoreScriptTree())
+                NoMoreScriptEmpty())
           }
 
         case i: Ident =>
-          NoMoreScriptIf(NoMoreScriptTree(), toTree(caseDef.body, returnValue, None), NoMoreScriptTree())
+          NoMoreScriptIf(NoMoreScriptEmpty(), toTree(caseDef.body, returnValue, None), NoMoreScriptEmpty())
       }
       //      NoMoreScriptTrees(
       //        List(toTree(caseDef.pat, false, None), toTree(caseDef.guard, false, None), toTree(caseDef.body, returnValue, None)), false)
@@ -492,14 +502,16 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         case select: Select => toSelect(select, returnValue)
         case ident: Ident => toIdent(ident, returnValue)
         case nw: New => toNew(nw, returnValue)
-        case fun: Function => NoMoreScriptJsFunction(toParameterNames(fun.vparams).toMap, toTree(fun.body, false))
+        case fun: Function =>
+          println("funct " + fun.tpe.resultType.toString() + " " + fun.tpe.resultType.getClass + " " + fun)
+          NoMoreScriptJsFunction(None, toParameterNames(fun.vparams).toMap, toTree(fun.body, !fun.tpe.resultType.toString.endsWith("=> Unit")))
         case sper: Super if (!BASE_CLASSES.contains(sper.symbol.superClass.name.toString)) =>
           NoMoreScriptSuper(toTree(sper.qual, returnValue, namespace, memberNames))
 
         case aplyImplicit: ApplyImplicitView if (aplyImplicit.fun.toString.startsWith("com.github.suzuki0keiichi.nomorescript.bridge.bridge.toJsFunction")) =>
           aplyImplicit.args(0) match {
             case fun: Function =>
-              NoMoreScriptJsFunction(toParameterNames(fun.vparams).toMap, toTree(fun.body, false))
+              NoMoreScriptJsFunction(Some(fun.vparams.head.name.toString()), toParameterNames(fun.vparams.tail).toMap, toTree(fun.body, !fun.tpe.resultType.toString.endsWith("=> Unit")))
 
             case Block(_, Typed(Apply(Select(New(className), _), _), _)) if (className.toString.startsWith("anonymous class ")) =>
               findClass(className.toString.substring("anonymous class ".length)) match {
@@ -507,11 +519,11 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
                 case _ =>
                   addError(aplyImplicit.pos, "unknown error")
-                  NoMoreScriptTree()
+                  NoMoreScriptEmpty()
               }
 
             case _ =>
-              NoMoreScriptTree()
+              NoMoreScriptEmpty()
           }
 
         case aply: Apply => toApply(aply, returnValue)
@@ -551,10 +563,10 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         case m: Match =>
           // NoMoreScriptTrees(List(toTree(m.selector, false, None)) ::: m.cases.map(toCase(_, returnValue)), true)
           addError(m.pos, "pattern match is not supported")
-          NoMoreScriptTree()
+          NoMoreScriptEmpty()
 
         case t: Tree =>
-          NoMoreScriptTree()
+          NoMoreScriptEmpty()
       }
     }
   }

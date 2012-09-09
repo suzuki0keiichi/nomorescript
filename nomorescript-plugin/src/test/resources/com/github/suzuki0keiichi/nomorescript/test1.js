@@ -23,9 +23,13 @@ UsingTest = function() {
 /*
  * @function
  * @param {A} resource
- * @param {A => B} func
  */
-UsingTest.prototype.using = function(resource, func) {
+UsingTest.prototype.using = function(resource) {
+  /*
+   * @function
+   * @param {A => B} func
+   */
+  return function(func) {
   try {
     return func(resource);
   } catch (__match_target__) {
@@ -39,6 +43,7 @@ UsingTest.prototype.using = function(resource, func) {
     if (resource != null) {
       resource.close();
     }
+  }
   }
 };
 
@@ -132,19 +137,26 @@ com.github.suzuki0keiichi.compilertest.Class2 = function(val1, var1) {
   this.var1 = null;
   this.val1 = val1;
   this.var1 = var1;
-  this.class2Def(10, function() {
-    alert("hello anonymouse class");
-  });
+  this.class2Def(10)(
+  function() {
+    window.alert("hello anonymouse class");
+  }
+  );
 };
 
 /*
  * @function
  * @param {number} param1
- * @param {() => Unit} f1
  */
-com.github.suzuki0keiichi.compilertest.Class2.prototype.class2Def = function(param1, f1) {
+com.github.suzuki0keiichi.compilertest.Class2.prototype.class2Def = function(param1) {
+  /*
+   * @function
+   * @param {() => Unit} f1
+   */
+  return function(f1) {
   f1();
   window.alert(param1);
+  }
 };
 
 /**
@@ -165,7 +177,7 @@ com.github.suzuki0keiichi.compilertest.Class3 = function(val1, val2, notMemberVa
   this.val1 = val1;
   this.val2 = val2;
   this.val3 = 10;
-  new Class2(10, "innerClass1 hello");
+  new com.github.suzuki0keiichi.compilertest.Class2(10, "innerClass1 hello");
 };
 
 window.alert("hello Object1");

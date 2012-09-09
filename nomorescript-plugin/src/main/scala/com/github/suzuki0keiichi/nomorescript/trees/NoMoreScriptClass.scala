@@ -32,10 +32,10 @@ case class NoMoreScriptClass(
             fullName + ".prototype.__super__ = " + parent + ";",
             "")
         case _ => Nil
-      }) ::: (traits match {
-      case list: List[String] if (!list.isEmpty) => List(fullName + ".prototype.__super_traits__ = Array(" + list.mkString(", ") + ");", "")
-      case _ => Nil
-    }) :::
+      }) ::: {traits match {
+      case Nil => Nil
+      case list: List[_] if (!list.isEmpty) => List(fullName + ".prototype.__super_traits__ = Array(" + traits.mkString(", ") + ");", "")
+    }} :::
       (traitImplementedMethods match {
         case methods if (methods.isEmpty) => Nil
         case _ => traitImplementedMethods.flatMap(methods =>

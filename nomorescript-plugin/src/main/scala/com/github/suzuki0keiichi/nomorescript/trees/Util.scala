@@ -18,10 +18,17 @@ object Util {
       List(text)
     } else {
       if (lines.size > 1) {
-        List(text + lines.first) ::: lines.tail
+        List(text + lines.head) ::: lines.tail
       } else {
         List(text + lines(0))
       }
+    }
+  }
+
+  def mapOrNil(lines: List[String], func: List[String] => List[String]) = {
+    lines match { 
+      case Nil => Nil
+      case _ => func(lines)
     }
   }
 }

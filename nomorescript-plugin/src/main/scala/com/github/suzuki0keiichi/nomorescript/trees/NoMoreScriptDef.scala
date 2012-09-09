@@ -8,13 +8,13 @@ case class NoMoreScriptDef(name: String, paramss: List[Map[String, String]], bod
     }
 
     List("/*", " * @function") :::
-      paramss.head.map(param => " * @param {" + param._2 + "} " + param._1).toList :::
+      (if (paramss.length > 0) paramss.head.map(param => " * @param {" + param._2 + "} " + param._1).toList else Nil) :::
       List(" */") :::
-      List(first + "(" + paramss.head.map(_._1).toList.mkString(", ") + ") {") :::
+      List(first + "(" + (if (paramss.length > 0) paramss.head.map(_._1).toList.mkString(", ") else "") + ") {") :::
       (if (paramss.length > 1) {
         paramss.tail.flatMap {
           params =>
-            List("  /*", "   * function") :::
+            List("  /*", "   * @function") :::
               params.map(param => "   * @param {" + param._2 + "} " + param._1).toList :::
               List("   */", "  return function(" + params.map(_._1).toList.mkString(", ") + ") {")
         }

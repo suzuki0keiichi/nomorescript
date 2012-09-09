@@ -2,6 +2,8 @@ package com.github.suzuki0keiichi.nomorescript
 
 import com.github.suzuki0keiichi.nomorescript.annotation.global
 import com.github.suzuki0keiichi.nomorescript.annotation.mock
+import com.github.suzuki0keiichi.nomorescript.bridge.bridge._
+import com.github.suzuki0keiichi.nomorescript.bridge.JsFunction1
 
 @mock class Console {
   def log(message: String) = {}
@@ -36,8 +38,8 @@ class Class2(val message: String) extends Class1 with Trait1 {
   console.log(message)
   callTrait1()
 
-  def callClass2(num: Int)(func: (String => String)) = {
-    console.log("" + num + " " + func("Class2.callClass2"))
+  def callClass2(num: Int)(func: String => String) = {
+    console.log("" + num + " " + func("Class2.callClass2") + " completed")
   }
 }
 

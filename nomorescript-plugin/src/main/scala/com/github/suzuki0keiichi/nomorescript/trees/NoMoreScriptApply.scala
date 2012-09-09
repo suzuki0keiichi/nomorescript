@@ -5,7 +5,7 @@ case class NoMoreScriptApply(fun: NoMoreScriptTree, params: List[NoMoreScriptTre
   val arrayApplyMatcher = "scala\\.(Array|Map)\\.apply".r
   val applyMatcher = "([a-zA-Z0-9_.]+)\\.apply".r
 
-  override def toJs(terminate: Boolean) = {
+  override def toJs(terminate: Boolean): List[String] = {
     val childJs = (fun.toJs(false) match {
       case js if (js.size > 1) =>
         js.last match {
@@ -22,7 +22,7 @@ case class NoMoreScriptApply(fun: NoMoreScriptTree, params: List[NoMoreScriptTre
         }
     }) match {
       case js if (js.size > 1) =>
-        js.first match {
+        js.head match {
           case rootMatcher(ope, name) => List(ope + name) ::: js.tail
           case _ => js
         }
@@ -34,24 +34,27 @@ case class NoMoreScriptApply(fun: NoMoreScriptTree, params: List[NoMoreScriptTre
         }
     }
 
+    val head = if (isArrayApply) "[" else "("
+    val tail = if (isArrayApply) "]" else ")"
+    val childJs2 = if (returnValue) Util.addFirst(childJs, "return ") else childJs
+    
     val paramCsString = if (params.isEmpty) {
       ""
     } else {
-      val thisJs = params.flatMap(_.toJs(false))
-      if (!thisJs.isEmpty) {
-        thisJs.reduceLeft(_ + ", " + _)
+      val thisJs: List[List[String]] = params.map(_.toJs(false))
+      if (!thisJs.flatten.isEmpty) {
+        if (thisJs.exists(_.exists(_.endsWith(";")))) {
+          // パラメーターの場所に複数行ある場合は特殊な表示方法にする
+          return Util.addLast(childJs2, head) ++ thisJs.reduceLeft(_ ::: ", " +: _) :+ (tail + (if (terminate) ";" else ""))
+        } else {
+          thisJs.flatten.reduceLeft(_ + ", " + _)
+        }
       } else {
         ""
       }
     }
 
-    val childJs2 = if (returnValue) Util.addFirst(childJs, "return ") else childJs
-
-    if (isArrayApply) {
-      Util.addLast(childJs2, "[" + paramCsString + "]" + (if (terminate) ";" else ""))
-    } else {
-      Util.addLast(childJs2, "(" + paramCsString + ")" + (if (terminate) ";" else ""))
-    }
+    Util.addLast(childJs2, head + paramCsString + tail + (if (terminate) ";" else ""))
   }
 
   def toSuperConstructorApply() = {

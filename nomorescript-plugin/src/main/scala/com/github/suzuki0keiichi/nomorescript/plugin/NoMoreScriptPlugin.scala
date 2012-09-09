@@ -11,7 +11,7 @@ class NoMoreScriptPlugin(val global: Global) extends Plugin {
   var outputDir = "target/js"
   lazy val components: List[PluginComponent] = List(new NoMoreScriptPluginComponent(global, this))
 
-  override def processOptions(options: List[String], error: String => Unit) = {
+  override def processOptions(options: List[String], error: String => Unit) {
     options.foreach {
       case s: String if (s.startsWith("d:")) =>
         outputDir = s.substring(2)
@@ -22,4 +22,6 @@ class NoMoreScriptPlugin(val global: Global) extends Plugin {
       case _ =>
     }
   }
+
+
 }

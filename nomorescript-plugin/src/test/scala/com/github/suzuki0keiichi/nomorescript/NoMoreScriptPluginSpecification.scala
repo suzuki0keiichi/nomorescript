@@ -35,7 +35,7 @@ class NoMoreScriptPluginSpecification extends Specification {
   }
 
   "total" should {
-    /*"test1.scala" in {
+    "test1.scala" in {
       val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
 
       fileDelete("target/test-js/com/github/suzuki0keiichi/nomorescript/test1.txt.js")
@@ -76,8 +76,8 @@ class NoMoreScriptPluginSpecification extends Specification {
 
       reporter.hasErrors must beFalse
 
-      val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test3.txt.js").getLines().toList
-      val src2 = Source.fromFile(currentPath + "test3.js").getLines().toList
+      val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test3.txt.js").getLines().toList.map(_ + "\n")
+      val src2 = Source.fromFile(currentPath + "test3.js").getLines().toList.map(_ + "\n")
 
       src2 mustEqual src1
     }
@@ -93,7 +93,7 @@ class NoMoreScriptPluginSpecification extends Specification {
       reporter.hasErrors must beFalse
 
       true
-    }*/
+    }
 
     "test5.scala" in {
       val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))

@@ -6,6 +6,8 @@ version := "0.1.0-SNAPSHOT"
 
 scalaVersion := "2.9.2"
 
+scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xlint")
+
 libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-library" % "2.9.2" % "test",
   "org.scala-lang" % "scala-compiler" % "2.9.2",

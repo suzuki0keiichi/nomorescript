@@ -31,6 +31,8 @@ class UsingTest {
 package com.github.suzuki0keiichi.compilertest {
 
   trait Trait1 {
+    alert("Trait1 constructor called")
+
     def trait1Def() = "trait"
   }
 

@@ -4,12 +4,14 @@ case class NoMoreScriptSelect(name: String, child: NoMoreScriptTree) extends NoM
   override def toJs(terminate: Boolean) = {
     val childJs = child.toJs(false)
 
+    val replacedName = name.replaceAll("super\\$", "__super__.")
+
     if (name == "<init>") {
       if (terminate) Util.addLast(childJs, ";") else childJs
     } else if (childJs == Nil) {
-      List(name + (if (terminate) ";" else ""))
+      List(replacedName + (if (terminate) ";" else ""))
     } else {
-      Util.addLast(childJs, "." + name + (if (terminate) ";" else ""))
+      Util.addLast(childJs, "." + replacedName + (if (terminate) ";" else ""))
     }
   }
 }

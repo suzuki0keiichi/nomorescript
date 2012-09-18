@@ -56,21 +56,19 @@ if (typeof com.github.suzuki0keiichi.compilertest === "undefined") { com.github.
  * @interface
  */
 com.github.suzuki0keiichi.compilertest.Trait1 = function() {
+  window.alert("Trait1 constructor called");
 };
+
+com.github.suzuki0keiichi.compilertest.Trait1.__impl__ = {};
 
 /**
  * @function
  */
 com.github.suzuki0keiichi.compilertest.Trait1.prototype.trait1Def = function(){};
 
-(function() {
-  var __trait__ = com.github.suzuki0keiichi.compilertest.Trait1;
-
-  __trait__.prototype.trait1Def = function() {
-    return "trait";
-  };
-  
-})();
+com.github.suzuki0keiichi.compilertest.Trait1.__impl__.trait1Def = function() {
+  return "trait";
+};
 
 /**
  * @interface
@@ -78,19 +76,16 @@ com.github.suzuki0keiichi.compilertest.Trait1.prototype.trait1Def = function(){}
 com.github.suzuki0keiichi.compilertest.Trait2 = function() {
 };
 
+com.github.suzuki0keiichi.compilertest.Trait2.__impl__ = {};
+
 /**
  * @function
  */
 com.github.suzuki0keiichi.compilertest.Trait2.prototype.trait2Def = function(){};
 
-(function() {
-  var __trait__ = com.github.suzuki0keiichi.compilertest.Trait2;
-
-  __trait__.prototype.trait2Def = function() {
-    return "trait";
-  };
-  
-})();
+com.github.suzuki0keiichi.compilertest.Trait2.__impl__.trait2Def = function() {
+  return "trait";
+};
 
 /**
  * @constructor
@@ -103,8 +98,8 @@ com.github.suzuki0keiichi.compilertest.Class1 = function() {
 
 com.github.suzuki0keiichi.compilertest.Class1.prototype.__super_traits__ = Array(com.github.suzuki0keiichi.compilertest.Trait1, com.github.suzuki0keiichi.compilertest.Trait2);
 
-com.github.suzuki0keiichi.compilertest.Class1.prototype.trait1Def = com.github.suzuki0keiichi.compilertest.Trait1.prototype.trait1Def;
-com.github.suzuki0keiichi.compilertest.Class1.prototype.trait2Def = com.github.suzuki0keiichi.compilertest.Trait2.prototype.trait2Def;
+com.github.suzuki0keiichi.compilertest.Class1.prototype.trait1Def = com.github.suzuki0keiichi.compilertest.Trait1.__impl__.trait1Def;
+com.github.suzuki0keiichi.compilertest.Class1.prototype.trait2Def = com.github.suzuki0keiichi.compilertest.Trait2.__impl__.trait2Def;
 
 /**
  * @function

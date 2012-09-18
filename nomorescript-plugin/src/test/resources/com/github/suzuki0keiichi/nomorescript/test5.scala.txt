@@ -25,8 +25,8 @@ import Global._
 trait Trait1 {
   console.log("2 Trait1 constructor called")
 
-  def callTrait1() = {
-    console.log("5 Trait1.callTrait1 called")
+  def callTrait1(num: Int) = {
+    console.log(num + " Trait1.callTrait1 called")
   }
 }
 
@@ -36,17 +36,42 @@ class Class1 {
 
 class Class2(val message: String) extends Class1 with Trait1 {
   console.log(message)
-  callTrait1()
+  callTrait1(5)
 
   def callClass2(num: Int)(func: String => String) = {
-    console.log("" + num + " " + func("Class2.callClass2") + " completed")
+    console.log("" + num + " " + func("Class2.callClass2"))
   }
+}
+
+trait Trait2 {
+  console.log("7 Trait2 constructor called")
+
+  def callTrait2(num: Int) = {
+    console.log(num + " Trait2.callTrait2 called")
+  }
+}
+
+trait Trait3 extends Trait2 {
+  console.log("8 Trait3 constructor called")
+
+  override def callTrait2(num: Int) = {
+    console.log(num + " Trait3.callTrait2(overridden) called")
+    super.callTrait2(num + 1)
+  }
+}
+
+class Class3 extends Trait3 {
 }
 
 @global object GlobalObject2 {
-  val c = new Class2("4 Class2 constructor")
+  val c2 = new Class2("4 Class2 constructor")
 
-  c.callClass2(6) { message =>
+  c2.callClass2(6) { message =>
     message + " called"
   }
+
+  val c3 = new Class3()
+
+  c3.callTrait2(9)
 }
+

@@ -2,7 +2,7 @@ package com.github.suzuki0keiichi.nomorescript.trees
 
 case class NoMoreScriptTraitDef(name: String, paramss: List[Map[String, String]], body: NoMoreScriptTree, traitName: String) extends NoMoreScriptTree {
   override def toJs(terminate: Boolean) = {
-    val first = "__trait__.prototype." + name + " = function"
+    val first = traitName + ".__impl__." + name + " = function"
 
     List(first + "(" + paramss.head.map(_._1).toList.mkString(", ") + ") {") :::
       (if (paramss.length > 1) {

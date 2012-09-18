@@ -39,7 +39,7 @@ case class NoMoreScriptClass(
       (traitImplementedMethods match {
         case methods if (methods.isEmpty) => Nil
         case _ => traitImplementedMethods.flatMap(methods =>
-          methods._2.map(method => fullName + ".prototype." + method + " = " + methods._1 + ".prototype." + method + ";")).toList ::: List("")
+          methods._2.map(method => fullName + ".prototype." + method + " = " + methods._1 + ".__impl__." + method + ";")).toList ::: List("")
       }) :::
       children.flatMap(_._2.toJs(true)).toList
   }

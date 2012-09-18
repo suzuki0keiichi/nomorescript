@@ -14,7 +14,7 @@ case class NoMoreScriptConstructor(className: String, params: Map[String, String
   def toJsForInterface() = {
     List("/**", " * @interface", " */", className + " = function(" + params.map(_._1).mkString(", ") + ") {") :::
       body.flatMap(_.toJs(true)).map("  " + _) :::
-      List("};", "")
+      List("};", "", className + ".__impl__ = {};", "")
   }
 }
 

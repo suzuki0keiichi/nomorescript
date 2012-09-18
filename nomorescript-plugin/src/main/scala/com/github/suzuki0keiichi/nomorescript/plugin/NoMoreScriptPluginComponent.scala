@@ -139,7 +139,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
           cdef.impl.parents.collect {
             case t: TypeTree if (!BASE_CLASSES.contains(t.toString) && t.tpe.typeSymbol.isTrait) =>
               t.toString -> t.tpe.members.collect {
-                case m: MethodSymbol if (t.toString == m.enclClass.tpe.toString && !m.name.toString.startsWith("$")) => m.name.toString
+                case m: MethodSymbol if (t.toString == m.enclClass.tpe.toString && m.name.toString.indexOf("$") == - 1) => m.name.toString
               }
           }.toMap
 
@@ -153,7 +153,8 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         if (isTrait) {
           NoMoreScriptTrait(name, namespace, toConstructor(cdef, namespace),
             cdef.impl.body.collect {
-              case ddef: DefDef => ddef.name.toString -> toTree(ddef, false, namespace)
+              case ddef: DefDef if (ddef.name.toString.indexOf("$") == -1) =>
+                ddef.name.toString -> toTree(ddef, false, namespace)
             }.toMap)
         } else {
           NoMoreScriptClass(name, namespace, toConstructor(cdef, namespace), parent, traits,

@@ -8,7 +8,7 @@ case class NoMoreScriptTraitDef(name: String, paramss: List[Map[String, String]]
       (if (paramss.length > 1) {
         paramss.tail.flatMap {
           params =>
-            List("  /*", "   * function") :::
+            List("  /**", "   * function") :::
               params.map(param => "   * @param {" + param._2 + "} " + param._1).toList :::
               List("   */", "  return function(" + params.map(_._1).toList.mkString(", ") + ") {")
         }
@@ -25,7 +25,7 @@ case class NoMoreScriptTraitDef(name: String, paramss: List[Map[String, String]]
   }
 
   def toJsForInterface(): List[String] = {
-    List("/*", " * @function") :::
+    List("/**", " * @function") :::
       paramss.head.map(param => " * @param {" + param._2 + "} " + param._1).toList :::
       List(" */") :::
       List(traitName + ".prototype." + name + " = function(" + paramss.head.map(_._1).toList.mkString(", ") + "){};", "")

@@ -20,7 +20,7 @@ case class NoMoreScriptClass(
     List("/**", " * @constructor") :::
       members.map(member => " * @property {" + member._2 + "} " + member._1).toList :::
       parent.map(p => List(" * @extends {" + p + "}")).getOrElse(Nil) :::
-      traits.map(t => " * @implement {" + t + "}") :::
+      traits.map(t => " * @implements {" + t + "}") :::
       constructor.params.map(param => " * @param {" + param._2 + "} " + param._1).toList :::
       List(" */") :::
       constructor.toJs(true) :::

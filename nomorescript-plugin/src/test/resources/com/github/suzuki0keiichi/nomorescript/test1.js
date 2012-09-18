@@ -5,7 +5,7 @@ Global1 = function() {
   window.alert("hello Global1");
 };
 
-/*
+/**
  * @function
  */
 function hello() {
@@ -20,12 +20,12 @@ hello();
 UsingTest = function() {
 };
 
-/*
+/**
  * @function
  * @param {A} resource
  */
 UsingTest.prototype.using = function(resource) {
-  /*
+  /**
    * @function
    * @param {A => B} func
    */
@@ -47,7 +47,10 @@ UsingTest.prototype.using = function(resource) {
   }
 };
 
-namespace(["com", "github", "suzuki0keiichi", "compilertest"]);
+if (typeof com === "undefined") { com = {}; }
+if (typeof com.github === "undefined") { com.github = {}; }
+if (typeof com.github.suzuki0keiichi === "undefined") { com.github.suzuki0keiichi = {}; }
+if (typeof com.github.suzuki0keiichi.compilertest === "undefined") { com.github.suzuki0keiichi.compilertest = {}; }
 
 /**
  * @interface
@@ -55,7 +58,7 @@ namespace(["com", "github", "suzuki0keiichi", "compilertest"]);
 com.github.suzuki0keiichi.compilertest.Trait1 = function() {
 };
 
-/*
+/**
  * @function
  */
 com.github.suzuki0keiichi.compilertest.Trait1.prototype.trait1Def = function(){};
@@ -75,7 +78,7 @@ com.github.suzuki0keiichi.compilertest.Trait1.prototype.trait1Def = function(){}
 com.github.suzuki0keiichi.compilertest.Trait2 = function() {
 };
 
-/*
+/**
  * @function
  */
 com.github.suzuki0keiichi.compilertest.Trait2.prototype.trait2Def = function(){};
@@ -91,8 +94,8 @@ com.github.suzuki0keiichi.compilertest.Trait2.prototype.trait2Def = function(){}
 
 /**
  * @constructor
- * @implement {com.github.suzuki0keiichi.compilertest.Trait1}
- * @implement {com.github.suzuki0keiichi.compilertest.Trait2}
+ * @implements {com.github.suzuki0keiichi.compilertest.Trait1}
+ * @implements {com.github.suzuki0keiichi.compilertest.Trait2}
  */
 com.github.suzuki0keiichi.compilertest.Class1 = function() {
   window.alert("Class1 say hello");
@@ -103,7 +106,7 @@ com.github.suzuki0keiichi.compilertest.Class1.prototype.__super_traits__ = Array
 com.github.suzuki0keiichi.compilertest.Class1.prototype.trait1Def = com.github.suzuki0keiichi.compilertest.Trait1.prototype.trait1Def;
 com.github.suzuki0keiichi.compilertest.Class1.prototype.trait2Def = com.github.suzuki0keiichi.compilertest.Trait2.prototype.trait2Def;
 
-/*
+/**
  * @function
  * @param {number} param1
  * @param {string} param2
@@ -118,7 +121,7 @@ com.github.suzuki0keiichi.compilertest.Class1.prototype.class1Def = function(par
   }
 };
 
-/*
+/**
  * @function
  */
 com.github.suzuki0keiichi.compilertest.Class1.prototype.class1DefInt = function() {
@@ -144,12 +147,12 @@ com.github.suzuki0keiichi.compilertest.Class2 = function(val1, var1) {
   );
 };
 
-/*
+/**
  * @function
  * @param {number} param1
  */
 com.github.suzuki0keiichi.compilertest.Class2.prototype.class2Def = function(param1) {
-  /*
+  /**
    * @function
    * @param {() => Unit} f1
    */
@@ -181,7 +184,7 @@ com.github.suzuki0keiichi.compilertest.Class3 = function(val1, val2, notMemberVa
 };
 
 window.alert("hello Object1");
-/*
+/**
  * @function
  * @param {number} param1
  */
@@ -190,7 +193,11 @@ function object1Def(param1) {
 }
 
 
-namespace(["com", "github", "suzuki0keiichi", "compilertest", "childpackage"]);
+if (typeof com === "undefined") { com = {}; }
+if (typeof com.github === "undefined") { com.github = {}; }
+if (typeof com.github.suzuki0keiichi === "undefined") { com.github.suzuki0keiichi = {}; }
+if (typeof com.github.suzuki0keiichi.compilertest === "undefined") { com.github.suzuki0keiichi.compilertest = {}; }
+if (typeof com.github.suzuki0keiichi.compilertest.childpackage === "undefined") { com.github.suzuki0keiichi.compilertest.childpackage = {}; }
 
 /**
  * @constructor
@@ -198,7 +205,7 @@ namespace(["com", "github", "suzuki0keiichi", "compilertest", "childpackage"]);
 com.github.suzuki0keiichi.compilertest.childpackage.ChildPackageClass1 = function() {
 };
 
-/*
+/**
  * @function
  */
 com.github.suzuki0keiichi.compilertest.childpackage.ChildPackageClass1.prototype.childPackageClass1Def = function() {

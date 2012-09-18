@@ -503,7 +503,6 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         case ident: Ident => toIdent(ident, returnValue)
         case nw: New => toNew(nw, returnValue)
         case fun: Function =>
-          println("funct " + fun.tpe.resultType.toString() + " " + fun.tpe.resultType.getClass + " " + fun)
           NoMoreScriptJsFunction(None, toParameterNames(fun.vparams).toMap, toTree(fun.body, !fun.tpe.resultType.toString.endsWith("=> Unit")))
         case sper: Super if (!BASE_CLASSES.contains(sper.symbol.superClass.name.toString)) =>
           NoMoreScriptSuper(toTree(sper.qual, returnValue, namespace, memberNames))

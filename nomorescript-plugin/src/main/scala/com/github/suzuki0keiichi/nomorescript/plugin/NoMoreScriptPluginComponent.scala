@@ -16,15 +16,15 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
   val phaseName: String = "scala to javascript convert phase"
 
-  def newPhase(prev: Phase) = {
+  def newPhase(prev: Phase) =
     new NoMoreScriptPhase(prev)
-  }
+
 
   class NoMoreScriptPhase(prev: Phase) extends StdPhase(prev) {
     override def name: String = phaseName
 
     val BASE_CLASSES = List("java.lang.Object", "ScalaObject", "Product", "Serializable", "Object")
-    val PRIMITIVE_TYPES = Map("Int" -> "number", "String" -> "string", "Any" -> "Object")
+    val PRIMITIVE_TYPES = Map("Int" -> "number", "String" -> "string", "Any" -> "object")
     val localUnit = new ThreadLocal[(CompilationUnit, Boolean)]
 
     private def addError(pos: Position, message: String) {
@@ -104,6 +104,27 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       }
     }
 
+    def getSuperTraitsWithParent(parent: Symbol): List[Symbol] = {
+      val traits = parent.tpe.parents.collect {
+        case t: UniqueTypeRef if (!BASE_CLASSES.contains(t.toString) && !t.typeSymbol.isTrait) =>
+          getSuperTraitsWithParent(t.typeSymbol)
+
+        case t: UniqueTypeRef if (!BASE_CLASSES.contains(t.toString) && t.typeSymbol.isTrait) =>
+          getSuperTraitsWithParent(t.typeSymbol) ::: List(t.typeSymbol)
+      }
+
+      traits.flatten.distinct
+    }
+
+    def getAllSuperTraits(parent: Symbol, excludes: List[Symbol]): List[Symbol] = {
+      val traits = parent.tpe.parents.collect {
+        case t: UniqueTypeRef if (!BASE_CLASSES.contains(t.toString) && t.typeSymbol.isTrait && !excludes.contains(t.typeSymbol)) =>
+          getSuperTraitsWithParent(t.typeSymbol) ::: List(t.typeSymbol)
+      }
+
+      traits.flatten.distinct
+    }
+
     def toClass(cdef: ClassDef, namespace: Option[String]): NoMoreScriptTree = {
       if (cdef.mods.hasModuleFlag) {
         toModule(cdef)
@@ -121,43 +142,47 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         val name = cdef.name.toString.trim()
         val isTrait = cdef.impl.tpe.typeSymbol.isTrait
 
-        val parent: Option[String] = cdef.impl.parents.collectFirst {
-          case t: Ident if (!BASE_CLASSES.contains(t.toString) && !t.tpe.typeSymbol.isTrait) =>
+        val parent = cdef.impl.parents.collectFirst {
+          case t: Ident if (!BASE_CLASSES.contains(t.toString) && !t.tpe.typeSymbol.isTrait) => t
+        }
+
+        val parentName: Option[String] = parent.map {
+          t =>
             getPackageName(t.symbol.owner, null) match {
               case Some(packageName) => packageName + "." + t.toString
               case _ => t.toString
             }
         }
 
-        // TODO:これだと親の親が取れない(JsDocでinterfaceは継承できないと思うので)
-        val traits: List[String] = cdef.impl.parents.collect {
-          case t: TypeTree if (!BASE_CLASSES.contains(t.toString) && t.tpe.typeSymbol.isTrait) => t.toString
+        val superTraitsWithParent = parent match {
+          case Some(t) => getSuperTraitsWithParent(t.tpe.typeSymbol)
+          case None => Nil
         }
 
-        // TODO:これだとまだ親の親で実装されている関数が取れない
-        val implementedTraitMethods: Map[String, List[String]] =
-          cdef.impl.parents.collect {
-            case t: TypeTree if (!BASE_CLASSES.contains(t.toString) && t.tpe.typeSymbol.isTrait) =>
-              t.toString -> t.tpe.members.collect {
-                case m: MethodSymbol if (t.toString == m.enclClass.tpe.toString && m.name.toString.indexOf("$") == - 1) => m.name.toString
-              }
-          }.toMap
+        val traits = getAllSuperTraits(cdef.impl.tpe.typeSymbol, superTraitsWithParent)
 
-        val members: Map[String, String] = cdef.impl.body.collect {
-          case ddef: DefDef if (ddef.mods.hasAccessorFlag && ddef.tpt.toString != "Unit") =>
-            ddef.name.toString.trim() -> toPrimitiveType(ddef.tpt.toString)
+        val traitNames: List[String] = traits.map(getPackageName(_, null).get)
+
+        val implementedTraitMethods: Map[String, List[String]] = traits.collect {
+          case t: Symbol =>
+            getPackageName(t, null).get -> t.tpe.members.collect {
+              case m: MethodSymbol if (t == m.enclClass.tpe.typeSymbol && m.name.toString.indexOf("$") == -1) => m.name.toString
+            }
         }.toMap
 
-        val children = Map[String, NoMoreScriptTree]()
+        val members: Map[String, String] = cdef.impl.body.collect {
+          case vdef: ValDef =>
+            vdef.name.toString -> toPrimitiveType(vdef.tpt.toString)
+        }.toMap
 
         if (isTrait) {
-          NoMoreScriptTrait(name, namespace, toConstructor(cdef, namespace),
+          NoMoreScriptTrait(name, namespace, toConstructor(cdef, namespace, Nil),
             cdef.impl.body.collect {
               case ddef: DefDef if (ddef.name.toString.indexOf("$") == -1) =>
                 ddef.name.toString -> toTree(ddef, false, namespace)
             }.toMap)
         } else {
-          NoMoreScriptClass(name, namespace, toConstructor(cdef, namespace), parent, traits,
+          NoMoreScriptClass(name, namespace, toConstructor(cdef, namespace, traitNames), parentName, traitNames,
             implementedTraitMethods,
             members,
             cdef.impl.body.collect {
@@ -211,14 +236,14 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       params.map(param => param.name.toString -> toPrimitiveType(param.symbol.tpe.toString)).toMap
     }
 
-    def toConstructor(cdef: ClassDef, namespace: Option[String]) = {
+    def toConstructor(cdef: ClassDef, namespace: Option[String], superTraitNames: List[String]) = {
       val params: Map[String, String] = cdef.impl.body.collectFirst {
         case ddef: DefDef if (ddef.name.toString.trim() == "<init>") => toParameterNames(ddef.vparamss.head)
       }.getOrElse(Map[String, String]())
 
       val memberNames: Map[String, String] = cdef.impl.body.collect {
-        case ddef: DefDef if (ddef.mods.hasAccessorFlag && ddef.tpt.toString != "Unit") =>
-          ddef.name.toString.trim() -> toPrimitiveType(ddef.tpt.toString)
+        case vdef: ValDef =>
+          vdef.name.toString.trim() -> toPrimitiveType(vdef.tpt.toString)
       }.toMap
 
       val callSuperClass = cdef.impl.body.collectFirst {
@@ -236,6 +261,11 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
           }
       }.getOrElse(Nil)
 
+      val callSuperTraits = superTraitNames.map {
+        name =>
+          NoMoreScriptApply(NoMoreScriptSelect("call", NoMoreScriptIdent(name, false)), List(NoMoreScriptIdent("this", false)), false, false)
+      }
+
       val bodies = cdef.impl.body.filter {
         case ddef: DefDef => false
         case tree: Tree => true
@@ -246,7 +276,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         case None => cdef.name.toString.trim()
       }
 
-      NoMoreScriptConstructor(name, params, memberNames, callSuperClass ::: bodies)
+      NoMoreScriptConstructor(name, params, memberNames, callSuperClass ++ callSuperTraits ++ bodies)
     }
 
     def isAnonFun(ddef: DefDef): Boolean = {
@@ -285,7 +315,21 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       if (select.name.toString == "package") {
         toTree(select.qualifier, returnValue)
       } else {
-        NoMoreScriptSelect(select.name.toString, toTree(select.qualifier, returnValue))
+        select.symbol match {
+          case m: MethodSymbol if (select.name.toString.indexOf("super$") != -1) =>
+            // TODO:toJsの方でやる
+            if (m.referenced.enclClass.isTrait) {
+              val name = getPackageName(m.referenced.enclClass, null).get + ".__impl__." + select.name.toString.substring("super$".length) + ".call"
+              NoMoreScriptIdent(name, returnValue)
+            } else {
+              val name = getPackageName(m.referenced.enclClass, null).get + ".prototype." + select.name.toString.substring("super$".length) + ".call"
+              NoMoreScriptIdent(name, returnValue)
+            }
+
+          case _ =>
+            NoMoreScriptSelect(select.name.toString, toTree(select.qualifier, returnValue))
+        }
+
       }
     }
 
@@ -357,7 +401,13 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
                       NoMoreScriptOperator(operator, toTree(aply.fun.asInstanceOf[Select].qualifier, false, None), toTree(aply.args(0), false), returnValue)
 
                     case None =>
-                      val params = aply.args.map(toTree(_, false, None))
+                      val paramForSuperMethod = select.symbol match {
+                        case m: MethodSymbol if (select.name.toString.indexOf("super$") != -1) =>
+                          List(NoMoreScriptThis(false))
+                        case _ => Nil
+                      }
+
+                      val params = paramForSuperMethod ++ aply.args.map(toTree(_, false, None))
 
                       NoMoreScriptApply(toSelect(select, false), params, returnValue, isArrayApply(aply))
                   }
@@ -382,7 +432,11 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
     }
 
     def toPrimitiveType(typeName: String) = {
-      PRIMITIVE_TYPES.get(typeName).getOrElse(typeName)
+      if (typeName.indexOf("=>") != -1) {
+        "Function"
+      } else {
+        PRIMITIVE_TYPES.get(typeName).getOrElse(typeName)
+      }
     }
 
     def toDef(ddef: DefDef, packageName: Option[String]) = {
@@ -506,7 +560,11 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         case fun: Function =>
           NoMoreScriptJsFunction(None, toParameterNames(fun.vparams).toMap, toTree(fun.body, !fun.tpe.resultType.toString.endsWith("=> Unit")))
         case sper: Super if (!BASE_CLASSES.contains(sper.symbol.superClass.name.toString)) =>
-          NoMoreScriptSuper(toTree(sper.qual, returnValue, namespace, memberNames))
+          val parent = sper.symbol.tpe.parents.collectFirst {
+            case ref: UniqueTypeRef if (!ref.typeSymbol.isTrait) => ref.typeSymbol
+          }
+
+          NoMoreScriptIdent(getPackageName(parent.get, null).get, returnValue)
 
         case aplyImplicit: ApplyImplicitView if (aplyImplicit.fun.toString.startsWith("com.github.suzuki0keiichi.nomorescript.bridge.bridge.toJsFunction")) =>
           aplyImplicit.args(0) match {

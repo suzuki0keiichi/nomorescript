@@ -26,22 +26,17 @@ case class NoMoreScriptClass(
       constructor.toJs(true) :::
       (parent match {
         case Some(parent) =>
-          List("var __DummyClass__ = function(){};", "",
-            "__DummyClass__.prototype = " + parent + ".prototype;",
-            fullName + ".prototype = new __DummyClass__();",
-            fullName + ".prototype.__super__ = " + parent + ";",
+          List(fullName + ".prototype = new " + parent + "__dummy_constructor__();",
             "")
         case _ => Nil
-      }) ::: {traits match {
-      case Nil => Nil
-      case list: List[_] if (!list.isEmpty) => List(fullName + ".prototype.__super_traits__ = Array(" + traits.mkString(", ") + ");", "")
-    }} :::
+      }) :::
       (traitImplementedMethods match {
         case methods if (methods.isEmpty) => Nil
         case _ => traitImplementedMethods.flatMap(methods =>
           methods._2.map(method => fullName + ".prototype." + method + " = " + methods._1 + ".__impl__." + method + ";")).toList ::: List("")
       }) :::
-      children.flatMap(_._2.toJs(true)).toList
+      children.flatMap(_._2.toJs(true)).toList :::
+      List("/**", " * @constructor", " */", fullName + "__dummy_constructor__ = function() {};", fullName + "__dummy_constructor__.prototype = " + fullName + ".prototype;")
   }
 }
 

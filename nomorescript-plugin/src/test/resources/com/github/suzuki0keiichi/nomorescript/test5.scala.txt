@@ -22,21 +22,21 @@ import Global._
   console.log("1 GlobalObject1 created")
 }
 
+class Class1 {
+  console.log("2 or 11 Class1 constructor called")
+}
+
 trait Trait1 {
-  console.log("2 Trait1 constructor called")
+  console.log("3 or 12 Trait1 constructor called")
 
   def callTrait1(num: Int) = {
     console.log(num + " Trait1.callTrait1 called")
   }
 }
 
-class Class1 {
-  console.log("3 Class1 constructor called")
-}
-
-class Class2(val message: String) extends Class1 with Trait1 {
+class Class2(val message: String, num: Int) extends Class1 with Trait1 {
   console.log(message)
-  callTrait1(5)
+  callTrait1(num)
 
   def callClass2(num: Int)(func: String => String) = {
     console.log("" + num + " " + func("Class2.callClass2"))
@@ -63,8 +63,12 @@ trait Trait3 extends Trait2 {
 class Class3 extends Trait3 {
 }
 
+class Class4 extends Class2("13 Class2 constructor called", 14) with Trait1 {
+  console.log("15 Class4 constructor called")
+}
+
 @global object GlobalObject2 {
-  val c2 = new Class2("4 Class2 constructor")
+  val c2 = new Class2("4 Class2 constructor", 5)
 
   c2.callClass2(6) { message =>
     message + " called"
@@ -73,5 +77,7 @@ class Class3 extends Trait3 {
   val c3 = new Class3()
 
   c3.callTrait2(9)
+
+  val c4 = new Class4()
 }
 

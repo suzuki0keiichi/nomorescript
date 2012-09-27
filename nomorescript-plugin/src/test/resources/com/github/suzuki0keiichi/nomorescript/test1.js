@@ -1,9 +1,4 @@
-/**
- * @constructor
- */
-Global1 = function() {
-  window.alert("hello Global1");
-};
+window.alert("hello Global1");
 
 /**
  * @function
@@ -27,7 +22,7 @@ UsingTest = function() {
 UsingTest.prototype.using = function(resource) {
   /**
    * @function
-   * @param {A => B} func
+   * @param {Function} func
    */
   return function(func) {
   try {
@@ -46,6 +41,12 @@ UsingTest.prototype.using = function(resource) {
   }
   }
 };
+
+/**
+ * @constructor
+ */
+UsingTest__dummy_constructor__ = function() {};
+UsingTest__dummy_constructor__.prototype = UsingTest.prototype;
 
 if (typeof com === "undefined") { com = {}; }
 if (typeof com.github === "undefined") { com.github = {}; }
@@ -93,10 +94,10 @@ com.github.suzuki0keiichi.compilertest.Trait2.__impl__.trait2Def = function() {
  * @implements {com.github.suzuki0keiichi.compilertest.Trait2}
  */
 com.github.suzuki0keiichi.compilertest.Class1 = function() {
+  com.github.suzuki0keiichi.compilertest.Trait1.call(this);
+  com.github.suzuki0keiichi.compilertest.Trait2.call(this);
   window.alert("Class1 say hello");
 };
-
-com.github.suzuki0keiichi.compilertest.Class1.prototype.__super_traits__ = Array(com.github.suzuki0keiichi.compilertest.Trait1, com.github.suzuki0keiichi.compilertest.Trait2);
 
 com.github.suzuki0keiichi.compilertest.Class1.prototype.trait1Def = com.github.suzuki0keiichi.compilertest.Trait1.__impl__.trait1Def;
 com.github.suzuki0keiichi.compilertest.Class1.prototype.trait2Def = com.github.suzuki0keiichi.compilertest.Trait2.__impl__.trait2Def;
@@ -125,6 +126,12 @@ com.github.suzuki0keiichi.compilertest.Class1.prototype.class1DefInt = function(
 
 /**
  * @constructor
+ */
+com.github.suzuki0keiichi.compilertest.Class1__dummy_constructor__ = function() {};
+com.github.suzuki0keiichi.compilertest.Class1__dummy_constructor__.prototype = com.github.suzuki0keiichi.compilertest.Class1.prototype;
+
+/**
+ * @constructor
  * @property {number} val1
  * @property {string} var1
  * @param {number} val1
@@ -149,7 +156,7 @@ com.github.suzuki0keiichi.compilertest.Class2 = function(val1, var1) {
 com.github.suzuki0keiichi.compilertest.Class2.prototype.class2Def = function(param1) {
   /**
    * @function
-   * @param {() => Unit} f1
+   * @param {Function} f1
    */
   return function(f1) {
   f1();
@@ -159,24 +166,37 @@ com.github.suzuki0keiichi.compilertest.Class2.prototype.class2Def = function(par
 
 /**
  * @constructor
+ */
+com.github.suzuki0keiichi.compilertest.Class2__dummy_constructor__ = function() {};
+com.github.suzuki0keiichi.compilertest.Class2__dummy_constructor__.prototype = com.github.suzuki0keiichi.compilertest.Class2.prototype;
+
+/**
+ * @constructor
  * @property {string} val1
- * @property {Object} val2
+ * @property {object} val2
+ * @property {number} notMemberVal1
  * @property {number} val3
- * @property {string} var1
  * @param {string} val1
- * @param {Object} val2
+ * @param {object} val2
  * @param {number} notMemberVal1
  */
 com.github.suzuki0keiichi.compilertest.Class3 = function(val1, val2, notMemberVal1) {
   this.val1 = null;
   this.val2 = null;
+  this.notMemberVal1 = null;
   this.val3 = null;
-  this.var1 = null;
   this.val1 = val1;
   this.val2 = val2;
+  this.notMemberVal1 = notMemberVal1;
   this.val3 = 10;
   new com.github.suzuki0keiichi.compilertest.Class2(10, "innerClass1 hello");
 };
+
+/**
+ * @constructor
+ */
+com.github.suzuki0keiichi.compilertest.Class3__dummy_constructor__ = function() {};
+com.github.suzuki0keiichi.compilertest.Class3__dummy_constructor__.prototype = com.github.suzuki0keiichi.compilertest.Class3.prototype;
 
 window.alert("hello Object1");
 /**
@@ -206,6 +226,12 @@ com.github.suzuki0keiichi.compilertest.childpackage.ChildPackageClass1 = functio
 com.github.suzuki0keiichi.compilertest.childpackage.ChildPackageClass1.prototype.childPackageClass1Def = function() {
   window.alert("childPackageClass1Def");
 };
+
+/**
+ * @constructor
+ */
+com.github.suzuki0keiichi.compilertest.childpackage.ChildPackageClass1__dummy_constructor__ = function() {};
+com.github.suzuki0keiichi.compilertest.childpackage.ChildPackageClass1__dummy_constructor__.prototype = com.github.suzuki0keiichi.compilertest.childpackage.ChildPackageClass1.prototype;
 
 $("hoge");
 

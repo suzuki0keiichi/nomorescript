@@ -15,7 +15,7 @@ class NoMoreScriptPluginSpecification extends Specification {
 
     path.substring(0, path.length() - "/com/github/suzuki0keiichi/nomorescript".length())
   }
-/*
+
   "NoMoreScriptApply" should {
     "0 argument" in {
       NoMoreScriptApply(NoMoreScriptSelect("hogeDef", NoMoreScriptIdent("id", false)), List(), false, false).toJs(false).mkString("_") mustEqual "id.hogeDef()"
@@ -33,9 +33,8 @@ class NoMoreScriptPluginSpecification extends Specification {
       NoMoreScriptApply(NoMoreScriptSelect("hogeDef", NoMoreScriptThis(false)), List(NoMoreScriptSelect("hogeVal", NoMoreScriptThis(false))), false, false).toJs(false).mkString("_") mustEqual "this.hogeDef(this.hogeVal)"
     }
   }
-*/
+
   "total" should {
-    /*
     "test1.scala" in {
       val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
 
@@ -95,7 +94,7 @@ class NoMoreScriptPluginSpecification extends Specification {
 
       true
     }
-*/
+
     "test5.scala" in {
       val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
 

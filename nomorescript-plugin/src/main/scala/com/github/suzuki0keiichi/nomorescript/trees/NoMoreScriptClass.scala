@@ -36,7 +36,7 @@ case class NoMoreScriptClass(
           methods._2.map(method => fullName + ".prototype." + method + " = " + methods._1 + ".__impl__." + method + ";")).toList ::: List("")
       }) :::
       children.flatMap(_._2.toJs(true)).toList :::
-      List("/**", " * @constructor", " */", fullName + "__dummy_constructor__ = function() {};", fullName + "__dummy_constructor__.prototype = " + fullName + ".prototype;")
+      List("/**", " * @constructor", " */", fullName + "__dummy_constructor__ = function() {};", fullName + "__dummy_constructor__.prototype = " + fullName + ".prototype;", "")
   }
 }
 

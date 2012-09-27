@@ -172,7 +172,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
         val members: Map[String, String] = cdef.impl.body.collect {
           case vdef: ValDef =>
-            vdef.name.toString -> toPrimitiveType(vdef.tpt.toString)
+            vdef.name.toString.trim -> toPrimitiveType(vdef.tpt.toString)
         }.toMap
 
         if (isTrait) {

@@ -3,7 +3,7 @@ import nomorescriptroot.jquery_fortest._
 import com.github.suzuki0keiichi.nomorescript.bridge._
 import com.github.suzuki0keiichi.nomorescript.annotation._
 
-class Global1 {
+@global object Global1 {
   alert("hello Global1")
 }
 

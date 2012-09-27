@@ -1,0 +1,41 @@
+import com.github.suzuki0keiichi.nomorescript.annotation.global
+import com.github.suzuki0keiichi.nomorescript.annotation.mock
+
+package hoge {
+@mock class Console {
+  def log(message: String) = {}
+}
+
+@mock class GlobalBase {
+ def console: Console = null
+}
+
+@global @mock object Global extends GlobalBase {
+}
+
+import Global._
+
+trait Trait1 {
+  def def1() = { console.log("def1") }
+}
+
+trait Trait2 {
+  println("trait2 constructor")
+  def def2(message: String) = { console.log(message) }
+}
+
+class Parent1(val param: Int) {
+  def def3() = { console.log("hello") }
+}
+
+class Class1 extends Parent1(10) with Trait1 with Trait2 {
+}
+}
+
+import hoge.Global._
+
+class A {
+  def hoge() {
+    console.log("hoge")
+  }
+}

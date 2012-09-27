@@ -4,20 +4,22 @@ case class NoMoreScriptCases(cases: List[NoMoreScriptIf]) extends NoMoreScriptTr
   override def toJs(terminate: Boolean): List[String] = {
     var first = true
 
-    cases.flatMap { c =>
+    val js = cases.flatMap { c =>
       val head = if (first) {
         first = false
         "if (" + c.cond.toJs(false).mkString(" ") + ") {"
-      } else if (c.cond.getClass() == classOf[NoMoreScriptTree]) {
+      } else if (c.cond.getClass == classOf[NoMoreScriptEmpty]) {
         "} else {"
       } else {
         "} else if (" + c.cond.toJs(false).mkString(" ") + ") {"
       }
 
       head :: c.thenp.toJs(true).map("  " + _)
-    } match {
+    }
+    
+    js match {
       case Nil => Nil
-      case js: List[String] => js ::: List("}")
+      case _ => js :+ "}"
     }
   }
 }

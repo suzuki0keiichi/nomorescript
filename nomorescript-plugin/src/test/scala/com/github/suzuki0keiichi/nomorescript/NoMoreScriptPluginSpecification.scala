@@ -3,15 +3,15 @@ package com.github.suzuki0keiichi.nomorescript
 import org.specs2.mutable.Specification
 import org.junit.runner.RunWith
 import org.specs2.runner.JUnitRunner
-import trees._
 import compiler.TestCompiler
 import scala.io.Source
+import trees._
 
 @RunWith(classOf[JUnitRunner])
 class NoMoreScriptPluginSpecification extends Specification {
-  lazy val currentPath = getClass().getResource("").getFile()
+  lazy val currentPath = getClass.getResource("").getFile
   lazy val srcRoot = {
-    val path = getClass().getResource("").getFile()
+    val path = getClass.getResource("").getFile
 
     path.substring(0, path.length() - "/com/github/suzuki0keiichi/nomorescript".length())
   }
@@ -47,8 +47,8 @@ class NoMoreScriptPluginSpecification extends Specification {
 
       reporter.hasErrors must beFalse
 
-      val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test1.txt.js").getLines().toList
-      val src2 = Source.fromFile(currentPath + "test1.js").getLines().toList
+      val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test1.txt.js").getLines().toList.map(_ + "\n")
+      val src2 = Source.fromFile(currentPath + "test1.js").getLines().toList.map(_ + "\n")
 
       src2 mustEqual src1
     }
@@ -76,10 +76,36 @@ class NoMoreScriptPluginSpecification extends Specification {
 
       reporter.hasErrors must beFalse
 
-      val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test3.txt.js").getLines().toList
-      val src2 = Source.fromFile(currentPath + "test3.js").getLines().toList
+      val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test3.txt.js").getLines().toList.map(_ + "\n")
+      val src2 = Source.fromFile(currentPath + "test3.js").getLines().toList.map(_ + "\n")
 
       src2 mustEqual src1
+    }
+
+    "test4.scala" in {
+      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
+
+      val reporter = compiler.compile(currentPath + "test4.scala.txt")
+      if (reporter.infos.size > 0) {
+        reporter.infos.head.toString mustEqual ""
+      }
+
+      reporter.hasErrors must beFalse
+
+      true
+    }
+
+    "test5.scala" in {
+      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
+
+      val reporter = compiler.compile(currentPath + "test5.scala.txt")
+      if (reporter.infos.size > 0) {
+        reporter.infos.head.toString mustEqual ""
+      }
+
+      reporter.hasErrors must beFalse
+
+      true
     }
   }
 

@@ -12,7 +12,7 @@ import com.github.suzuki0keiichi.nomorescript.bridge.JsFunction0
   def alert(message: Any) = {}
   def confirm(message: Any) = true
   def prompt(message: Any) = ""
-  def setTimeout(func: JsFunction0[Unit, Unit], time: Int) = 0
-  def setInterval(func: JsFunction0[Unit, Unit], time: Int) = 0
+  def setTimeout(func: () => Unit, time: Int) = 0
+  def setInterval(func: () => Unit, time: Int) = 0
   var onload: JsFunction0[AnyRef, Unit] = null
 }

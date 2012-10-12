@@ -107,6 +107,16 @@ class NoMoreScriptPluginSpecification extends Specification {
 
       true
     }
+    
+    "test_scopes.scala" in {
+      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
+      val reporter = compiler.compile(currentPath + "test_scopes.scala.txt")
+      if (reporter.infos.size > 0) {
+        reporter.infos.head.toString mustEqual ""
+      }
+      
+      true
+    }
   }
 
   def fileExists(name: String) = {

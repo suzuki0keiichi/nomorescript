@@ -19,6 +19,28 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
   def newPhase(prev: Phase) =
     new NoMoreScriptPhase(prev)
 
+  class ScopedVariables(private val parent: ScopedVariables, newScope: Boolean = false) {
+    val vars = Map[String, Symbol]()
+
+    def exists(name: String): Boolean = {
+      if (vars.contains(name)) {
+        true
+      } else if (newScope) {
+        false
+      } else {
+        parent.exists(name)
+      }
+    }
+
+    def getName(sym: Symbol): Option[String] = {
+      vars.collectFirst {
+        case param: Tuple2[String, Symbol] if (param._2 == sym) => param._1
+      } match {
+        case Some(name) => Some(name)
+        case None => parent.getName(sym)
+      }
+    }
+  }
 
   class NoMoreScriptPhase(prev: Phase) extends StdPhase(prev) {
     override def name: String = phaseName
@@ -125,7 +147,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       traits.flatten.distinct
     }
 
-    def toClass(cdef: ClassDef, namespace: Option[String]): NoMoreScriptTree = {
+    def toClass(cdef: ClassDef, scopedVars: ScopedVariables, namespace: Option[String]): NoMoreScriptTree = {
       if (cdef.mods.hasModuleFlag) {
         toModule(cdef)
       } else {
@@ -439,7 +461,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       }
     }
 
-    def toDef(ddef: DefDef, packageName: Option[String]) = {
+    def toDef(ddef: DefDef, scopedVars: ScopedVariables, packageName: Option[String]) = {
       val className = packageName match {
         case Some(packageName) => packageName + "." + ddef.symbol.owner.name.toString
         case _ => ddef.symbol.owner.name.toString
@@ -548,7 +570,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
       //        List(toTree(caseDef.pat, false, None), toTree(caseDef.guard, false, None), toTree(caseDef.body, returnValue, None)), false)
     }
 
-    def toTree(tree: Tree, returnValue: Boolean, namespace: Option[String] = None, memberNames: Map[String, String] = Map.empty[String, String]): NoMoreScriptTree = {
+    def toTree(tree: Tree, scopedVars: ScopedVariables, returnValue: Boolean, namespace: Option[String] = None, memberNames: Map[String, String] = Map.empty[String, String]): NoMoreScriptTree = {
       tree match {
         case ths: This => toThis(ths, returnValue)
         case pdef: PackageDef => toPackage(pdef, namespace)
@@ -590,18 +612,21 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
           toDef(ddef, namespace)
 
         case block: Block =>
+          val newScopedVars = new ScopedVariables(scopedVars, false) // TODO:引き継ぐ
           val children = block.stats.map(toTree(_, false, namespace, memberNames)).toList :::
             List(toTree(block.expr, returnValue, namespace, memberNames))
 
           NoMoreScriptTrees(children, false)
 
         case Try(block, catches, finalizer) =>
+          val newScopedVars = new ScopedVariables(scopedVars, false) // TODO:引き継ぐ
           NoMoreScriptTry(
             toTree(block, returnValue, namespace, memberNames),
             NoMoreScriptCases(catches.map(toCase(_, returnValue))),
             toTree(finalizer, false, namespace, memberNames))
 
         case ifBlock: If =>
+          val newScopedVars = new ScopedVariables(scopedVars, false) // TODO:引き継ぐ
           NoMoreScriptIf(toTree(ifBlock.cond, false), toTree(ifBlock.thenp, returnValue), toTree(ifBlock.elsep, returnValue))
 
         case literal: Literal =>

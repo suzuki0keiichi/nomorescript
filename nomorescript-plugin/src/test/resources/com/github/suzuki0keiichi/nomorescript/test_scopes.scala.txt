@@ -14,7 +14,7 @@ import Global._
 }
 
 @mock class GlobalBase {
-  lazy val console_dummy: Console = new Console()
+  lazy val console: Console = new Console()
 }
 
 @global @mock object Global extends GlobalBase {
@@ -22,28 +22,28 @@ import Global._
 
 class ScopeTest {
   val a = 10
-  console_dummy.log("a = " + a)
+  console.log("a = " + a)
 
   def hoge() = {
     val a = 20
-    console_dummy.log("a = " + a)
+    console.log("a = " + a)
   }
 
   hoge()
 
-  console_dummy.log("a = " + a)
+  console.log("a = " + a)
 
   if (a == 10) {
     val a = 30
-    console_dummy.log("a = " + a)
+    console.log("a = " + a)
     if (a == 30) {
       val a = 40
-      console_dummy.log("a = " + a)
+      console.log("a = " + a)
     }
-    console_dummy.log("a = " + a)
+    console.log("a = " + a)
   }
 
-  console_dummy.log("a = " + a)
+  console.log("a = " + a)
 }
 
 @global object Main extends App {

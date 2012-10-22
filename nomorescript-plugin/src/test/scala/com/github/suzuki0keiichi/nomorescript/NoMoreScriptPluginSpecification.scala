@@ -129,10 +129,10 @@ class NoMoreScriptPluginSpecification extends Specification {
 
       val console = evalJs("target/test-js/com/github/suzuki0keiichi/nomorescript/test_scopes.txt.js")
 
-      _root_.test_scopes.Global.console_dummy.clear()
+      _root_.test_scopes.Global.console.clear()
       new _root_.test_scopes.ScopeTest()
       
-      _root_.test_scopes.Global.console_dummy.messages mustEqual console.messages
+      _root_.test_scopes.Global.console.messages mustEqual console.messages
     }
   }
   
@@ -143,7 +143,7 @@ class NoMoreScriptPluginSpecification extends Specification {
       val bindings = engine.createBindings()
       val console = new DummyConsole()
 
-      bindings.put("console_dummy", console)
+      bindings.put("console", console)
       engine.eval(src.bufferedReader(), bindings)
 
       console

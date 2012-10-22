@@ -8,7 +8,6 @@ import scala.io.Source
 import trees._
 import javax.script.ScriptEngineManager
 import scala.collection.mutable.ListBuffer
-import cases._
 
 @RunWith(classOf[JUnitRunner])
 class NoMoreScriptPluginSpecification extends Specification {
@@ -130,10 +129,10 @@ class NoMoreScriptPluginSpecification extends Specification {
 
       val console = evalJs("target/test-js/com/github/suzuki0keiichi/nomorescript/test_scopes.txt.js")
 
-      test_scopes.Global.console.clear()
-      new test_scopes.ScopeTest()
-
-      test_scopes.Global.console.messages mustEqual console.messages
+      _root_.test_scopes.Global.console_dummy.clear()
+      new _root_.test_scopes.ScopeTest()
+      
+      _root_.test_scopes.Global.console_dummy.messages mustEqual console.messages
     }
   }
   
@@ -144,7 +143,7 @@ class NoMoreScriptPluginSpecification extends Specification {
       val bindings = engine.createBindings()
       val console = new DummyConsole()
 
-      bindings.put("console", console)
+      bindings.put("console_dummy", console)
       engine.eval(src.bufferedReader(), bindings)
 
       console

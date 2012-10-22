@@ -6,6 +6,9 @@ import org.specs2.runner.JUnitRunner
 import compiler.TestCompiler
 import scala.io.Source
 import trees._
+import javax.script.ScriptEngineManager
+import scala.collection.mutable.ListBuffer
+import cases._
 
 @RunWith(classOf[JUnitRunner])
 class NoMoreScriptPluginSpecification extends Specification {
@@ -14,6 +17,16 @@ class NoMoreScriptPluginSpecification extends Specification {
     val path = getClass.getResource("").getFile
 
     path.substring(0, path.length() - "/com/github/suzuki0keiichi/nomorescript".length())
+  }
+
+  class DummyConsole {
+    private val rawMessages = ListBuffer[String]()
+
+    def log(message: String) = {
+      rawMessages += message
+    }
+
+    def messages = rawMessages.toList
   }
 
   "NoMoreScriptApply" should {
@@ -107,16 +120,34 @@ class NoMoreScriptPluginSpecification extends Specification {
 
       true
     }
-    
+
     "test_scopes.scala" in {
       val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
       val reporter = compiler.compile(currentPath + "test_scopes.scala.txt")
       if (reporter.infos.size > 0) {
         reporter.infos.head.toString mustEqual ""
       }
-      
-      true
+
+      val console = evalJs("target/test-js/com/github/suzuki0keiichi/nomorescript/test_scopes.txt.js")
+
+      test_scopes.Global.console.clear()
+      new test_scopes.ScopeTest()
+
+      test_scopes.Global.console.messages mustEqual console.messages
     }
+  }
+  
+  def evalJs(filename: String) = {
+      val manager = new ScriptEngineManager()
+      val engine = manager.getEngineByName("javascript")
+      val src = Source.fromFile(filename)
+      val bindings = engine.createBindings()
+      val console = new DummyConsole()
+
+      bindings.put("console", console)
+      engine.eval(src.bufferedReader(), bindings)
+
+      console
   }
 
   def fileExists(name: String) = {

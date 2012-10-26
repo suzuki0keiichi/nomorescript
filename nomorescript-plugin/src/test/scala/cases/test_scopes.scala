@@ -7,9 +7,9 @@ import Global._
 
 @mock class Console {
   private val _messages = ListBuffer[String]()
-  
+
   def messages = _messages.toList
-  def log(message: String) = _messages.append(message)
+  def log(message: String) = { _messages += message }
   def clear() = _messages.clear()
 }
 

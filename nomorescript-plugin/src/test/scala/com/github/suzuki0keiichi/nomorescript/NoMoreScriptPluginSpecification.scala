@@ -8,15 +8,27 @@ import scala.io.Source
 import trees._
 import javax.script.ScriptEngineManager
 import scala.collection.mutable.ListBuffer
+import java.io.File
 
 @RunWith(classOf[JUnitRunner])
 class NoMoreScriptPluginSpecification extends Specification {
-  lazy val currentPath = getClass.getResource("").getFile
-  lazy val srcRoot = {
-    val path = getClass.getResource("").getFile
+  lazy val projectRootDir = {
+    val currentPath = getClass.getResource("").getFile
+    val index: Int = currentPath.indexOf("target" + File.separator + "scala-2.9.2") match {
+      case -1 => currentPath.indexOf("target/scala-2.9.2")
+      case index: Int => index
+    }
 
-    path.substring(0, path.length() - "/com/github/suzuki0keiichi/nomorescript".length())
+    if (index != -1) {
+      currentPath.substring(0, index)
+    } else {
+      currentPath
+    }
   }
+
+  val outputRootDir = (new File(projectRootDir + "/target/")).getAbsolutePath()
+  val srcRootDir = (new File(projectRootDir + "/src/test/resources/")).getAbsolutePath()
+  val testScriptDir = (new File(srcRootDir + "/com/github/suzuki0keiichi/nomorescript/")).getAbsolutePath()
 
   class DummyConsole {
     private val rawMessages = ListBuffer[String]()
@@ -46,60 +58,56 @@ class NoMoreScriptPluginSpecification extends Specification {
     }
   }
 
+  private def compile(scalaFileName: String, jsFileName: String) = {
+    val compiler = new TestCompiler(List("s:", "d:.." + File.separator + ".." + File.separator + "test-js"))
+
+    fileDelete(outputRootDir + "/test-js/com/github/suzuki0keiichi/nomorescript/" + jsFileName)
+    compiler.compile(srcRootDir, outputRootDir + "/scala-2.9.2/test-classes")(testScriptDir + "/" + scalaFileName)
+  }
+
+  private def diff(actualFileName: String, expectedFileName: String) = {
+    val src1 = Source.fromFile(outputRootDir + "/test-js/com/github/suzuki0keiichi/nomorescript/" + actualFileName).getLines().toList.map(_ + "\n")
+    val src2 = Source.fromFile(testScriptDir + "/" + expectedFileName).getLines().toList.map(_ + "\n")
+
+    src2 mustEqual src1
+  }
+
   "total" should {
     "test1.scala" in {
-      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
-
-      fileDelete("target/test-js/com/github/suzuki0keiichi/nomorescript/test1.txt.js")
-
-      val reporter = compiler.compile(currentPath + "test1.scala.txt")
+      val reporter = compile("test1.scala.txt", "test1.txt.js")
       if (reporter.infos.size > 0) {
-        reporter.infos.head.toString mustEqual ""
+        (reporter.infos.head.pos + " " + reporter.infos.head.msg) mustEqual ""
       }
 
       reporter.hasErrors must beFalse
 
-      val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test1.txt.js").getLines().toList.map(_ + "\n")
-      val src2 = Source.fromFile(currentPath + "test1.js").getLines().toList.map(_ + "\n")
-
-      src2 mustEqual src1
+      diff("test1.txt.js", "test1.js")
     }
 
     "test2.scala" in {
-      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
-
-      fileDelete("target/test-js/com/github/suzuki0keiichi/nomorescript/test2.js")
-      val reporter = compiler.compile(currentPath + "test2.scala.txt")
+      val reporter = compile("test2.scala.txt", "test2.txt.js")
 
       reporter.hasErrors must beTrue
       reporter.infos.size mustEqual 7
 
-      (new java.io.File("target/test-js/com/github/suzuki0keiichi/nomorescript/test2.js")).exists() mustEqual false
+      (new File(outputRootDir + "/test-js/com/github/suzuki0keiichi/nomorescript/test2.js")).exists() mustEqual false
     }
 
     "test3.scala" in {
-      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
-
-      fileDelete("target/test-js/com/github/suzuki0keiichi/nomorescript/test3.txt.js")
-      val reporter = compiler.compile(currentPath + "test3.scala.txt")
+      val reporter = compile("test3.scala.txt", "test3.txt.js")
       if (reporter.infos.size > 0) {
-        reporter.infos.head.toString mustEqual ""
+        (reporter.infos.head.pos + " " + reporter.infos.head.msg) mustEqual ""
       }
 
       reporter.hasErrors must beFalse
 
-      val src1 = Source.fromFile("target/test-js/com/github/suzuki0keiichi/nomorescript/test3.txt.js").getLines().toList.map(_ + "\n")
-      val src2 = Source.fromFile(currentPath + "test3.js").getLines().toList.map(_ + "\n")
-
-      src2 mustEqual src1
+      diff("test3.txt.js", "test3.js")
     }
 
     "test4.scala" in {
-      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
-
-      val reporter = compiler.compile(currentPath + "test4.scala.txt")
+      val reporter = compile("test4.scala.txt", "test4.txt.js")
       if (reporter.infos.size > 0) {
-        reporter.infos.head.toString mustEqual ""
+        (reporter.infos.head.pos + " " + reporter.infos.head.msg) mustEqual ""
       }
 
       reporter.hasErrors must beFalse
@@ -108,11 +116,9 @@ class NoMoreScriptPluginSpecification extends Specification {
     }
 
     "test5.scala" in {
-      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
-
-      val reporter = compiler.compile(currentPath + "test5.scala.txt")
+      val reporter = compile("test5.scala.txt", "test5.txt.js")
       if (reporter.infos.size > 0) {
-        reporter.infos.head.toString mustEqual ""
+        (reporter.infos.head.pos + " " + reporter.infos.head.msg) mustEqual ""
       }
 
       reporter.hasErrors must beFalse
@@ -121,42 +127,41 @@ class NoMoreScriptPluginSpecification extends Specification {
     }
 
     "test_scopes.scala" in {
-      val compiler = new TestCompiler(List("d:target/test-js", "s:" + srcRoot))
-      val reporter = compiler.compile(currentPath + "test_scopes.scala.txt")
+      val reporter = compile("test_scopes.scala.txt", "test_scopes.txt.js")
       if (reporter.infos.size > 0) {
-        reporter.infos.head.toString mustEqual ""
+        (reporter.infos.head.pos + " " + reporter.infos.head.msg) mustEqual ""
       }
 
-      val console = evalJs("target/test-js/com/github/suzuki0keiichi/nomorescript/test_scopes.txt.js")
+      val console = evalJs(outputRootDir + "/test-js/com/github/suzuki0keiichi/nomorescript/test_scopes.txt.js")
 
       _root_.test_scopes.Global.console.clear()
       new _root_.test_scopes.ScopeTest()
-      
+
       _root_.test_scopes.Global.console.messages mustEqual console.messages
     }
   }
-  
+
   def evalJs(filename: String) = {
-      val manager = new ScriptEngineManager()
-      val engine = manager.getEngineByName("javascript")
-      val src = Source.fromFile(filename)
-      val bindings = engine.createBindings()
-      val console = new DummyConsole()
+    val manager = new ScriptEngineManager()
+    val engine = manager.getEngineByName("javascript")
+    val src = Source.fromFile(filename)
+    val bindings = engine.createBindings()
+    val console = new DummyConsole()
 
-      bindings.put("console", console)
-      engine.eval(src.bufferedReader(), bindings)
+    bindings.put("console", console)
+    engine.eval(src.bufferedReader(), bindings)
 
-      console
+    console
   }
 
   def fileExists(name: String) = {
-    val file = new java.io.File(name)
+    val file = new File(name)
 
     file.exists()
   }
 
   def fileDelete(name: String) = {
-    val file = new java.io.File(name)
+    val file = new File(name)
 
     if (file.exists()) {
       file.delete()

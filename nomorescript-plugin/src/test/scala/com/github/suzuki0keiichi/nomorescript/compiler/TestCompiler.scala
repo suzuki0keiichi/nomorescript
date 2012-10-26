@@ -1,20 +1,17 @@
 package com.github.suzuki0keiichi.nomorescript.compiler
 
 import java.net.URLClassLoader
-
 import scala.Array.canBuildFrom
 import scala.tools.nsc.io.VirtualDirectory
 import scala.tools.nsc.reporters.StoreReporter
 import scala.tools.nsc.util.ClassPath
 import scala.tools.nsc.Global
 import scala.tools.nsc.Settings
-
 import com.github.suzuki0keiichi.nomorescript.plugin.NoMoreScriptPlugin
+import scala.tools.nsc.io.PlainFile
 
-class TestCompiler(val options: List[String] = Nil) {
-  val outputDir = new VirtualDirectory("[memory]", None)
-
-  lazy val settings = {
+class TestCompiler(options: List[String]) {
+  def getSettings(srcDir: String, outputDir: String) = {
     val settings = new Settings()
 
     settings.classpath.value = {
@@ -26,12 +23,12 @@ class TestCompiler(val options: List[String] = Nil) {
 
     settings.deprecation.value = true
     settings.unchecked.value = true
-    settings.outputDirs.setSingleOutput(outputDir)
+    settings.outputDirs.add(PlainFile.fromPath(srcDir), PlainFile.fromPath(outputDir))
     settings
   }
 
-  def compile(pathes: String*) = {
-    val global = new TestGlobal(options, settings)
+  def compile(srcDir: String, outputDir: String)(pathes: String*) = {
+    val global = new TestGlobal(options, getSettings(srcDir, outputDir))
     val run = new global.Run
 
     run.compile(pathes.toList)

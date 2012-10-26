@@ -1,12 +1,36 @@
 package com.github.suzuki0keiichi.nomorescript.plugin
 
 import java.io.IOException
-
 import scala.tools.nsc.plugins.PluginComponent
 import scala.tools.nsc.Global
 import scala.tools.nsc.Phase
-
-import com.github.suzuki0keiichi.nomorescript.trees._
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptApply
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptCases
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptClass
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptConstructor
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptDef
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptEmpty
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptIdent
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptIf
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptInstanceOf
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptJsFunction
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptLiteral
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptNamespace
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptNew
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptOperator
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptSelect
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptSetter
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptThis
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptThrow
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptTrait
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptTraitDef
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptTree
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptTrees
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptTry
+import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptVal
+import java.io.File
+import java.io.OutputStreamWriter
+import java.io.FileOutputStream
 
 class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin) extends PluginComponent {
 
@@ -18,48 +42,6 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
   def newPhase(prev: Phase) =
     new NoMoreScriptPhase(prev)
-
-  class ScopedVariables(private val parent: ScopedVariables) {
-    private val vars = scala.collection.mutable.Map[String, Symbol]()
-
-    private def exists(name: String): Boolean = {
-      if (vars.contains(name)) {
-        true
-      } else {
-        false
-      }
-    }
-
-    private def renamePut(origName: String, sym: Symbol, count: Int): String = {
-      val newName = origName + "__scoped__" + count
-
-      if (exists(newName)) {
-        renamePut(origName, sym, count + 1)
-      } else {
-        put(newName, sym)
-      }
-    }
-
-    def put(name: String, sym: Symbol): String = {
-      if (exists(name)) {
-        renamePut(name, sym, 1)
-      } else {
-        vars.put(name, sym)
-        name
-      }
-    }
-
-    def getName(sym: Symbol): String = {
-      val currentResult = vars.collectFirst {
-        case (name, varsSym) if (varsSym == sym) => name
-      }
-
-      currentResult match {
-        case Some(name) => name
-        case None => if (parent != null) { parent.getName(sym) } else { sym.name.toString() }
-      }
-    }
-  }
 
   class NoMoreScriptPhase(prev: Phase) extends StdPhase(prev) {
     override def name: String = phaseName
@@ -76,7 +58,7 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
     def apply(unit: CompilationUnit) {
       localUnit.set((unit, false))
 
-      val currentDir = new java.io.File(".")
+      val currentDir = new java.io.File(System.getProperties().getProperty("user.dir"))
       val scopedVars = new ScopedVariables(null)
 
       unit.body match {
@@ -103,11 +85,30 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
 
     private def createWriter(currentDir: java.io.File, unit: CompilationUnit) = {
       val file = unit.source.file.file
-      val relativePath =
-        if (file.getParent.startsWith(parent.srcRootDir)) {
-          file.getParent.substring(parent.srcRootDir.length())
+      val srcRootDir = {
+        val file = new File(parent.srcDir)
+        if (file.isAbsolute()) {
+          file.getAbsolutePath()
+        } else {
+          global.settings.outputDirs.outputs.headOption match {
+            case Some(dirPair) => dirPair._1.path + File.separator + parent.srcDir
+            case None => unit.source.file.file.getParent() + File.separator + parent.srcDir
+          }
+        }
+      }
+
+      val fileParent =
+        if (!file.getParent.endsWith(java.io.File.separator)) {
+          file.getParent + java.io.File.separator
         } else {
           file.getParent
+        }
+
+      val relativePath =
+        if (fileParent.startsWith(srcRootDir)) {
+          fileParent.substring(srcRootDir.length())
+        } else {
+          ""
         }
 
       val outputDirRoot = {
@@ -116,15 +117,18 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
         if (file.isAbsolute) {
           file.getAbsolutePath
         } else {
-          currentDir.getAbsolutePath + "/" + file.getPath
+          global.settings.outputDirs.outputs.headOption match {
+            case Some(dirPair) => dirPair._2 + File.separator + file.getPath()
+            case None => currentDir.getAbsolutePath + File.separator + file.getPath
+          }
         }
       }
 
-      val outputDir = new java.io.File(outputDirRoot + "/" + relativePath)
+      val outputDir = new java.io.File(outputDirRoot + File.separator + relativePath)
 
       outputDir.mkdirs()
 
-      new java.io.PrintWriter(outputDir.getPath + "/" + file.getName.replaceAll(".scala", "") + ".js", "UTF-8")
+      new java.io.PrintWriter(outputDir.getPath + File.separator + file.getName.replaceAll(".scala", "") + ".js", "UTF-8")
     }
 
     def toPackage(pdef: PackageDef, scopedVars: ScopedVariables) = {
@@ -710,4 +714,45 @@ class NoMoreScriptPluginComponent(val global: Global, parent: NoMoreScriptPlugin
     }
   }
 
+  class ScopedVariables(private val parent: ScopedVariables) {
+    private val vars = scala.collection.mutable.Map[String, Symbol]()
+
+    private def exists(name: String): Boolean = {
+      if (vars.contains(name)) {
+        true
+      } else {
+        false
+      }
+    }
+
+    private def renamePut(origName: String, sym: Symbol, count: Int): String = {
+      val newName = origName + "__scoped__" + count
+
+      if (exists(newName)) {
+        renamePut(origName, sym, count + 1)
+      } else {
+        put(newName, sym)
+      }
+    }
+
+    def put(name: String, sym: Symbol): String = {
+      if (exists(name)) {
+        renamePut(name, sym, 1)
+      } else {
+        vars.put(name, sym)
+        name
+      }
+    }
+
+    def getName(sym: Symbol): String = {
+      val currentResult = vars.collectFirst {
+        case (name, varsSym) if (varsSym == sym) => name
+      }
+
+      currentResult match {
+        case Some(name) => name
+        case None => if (parent != null) { parent.getName(sym) } else { sym.name.toString() }
+      }
+    }
+  }
 }

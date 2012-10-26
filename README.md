@@ -13,7 +13,7 @@ jarを作成
 
 scalacに指定して変換したいscalaファイルをコンパイル
 
-    scalac -Xplugin:nomorescript.jar -P:nomorescript:d:target/js -classpath nomorescript.jar -d target/scala-2.9.1/classes hoge.scala
+    scalac -Xplugin:nomorescript.jar -P:nomorescript:d:../js -classpath nomorescript.jar -d target/scala-2.9.1/classes hoge.scala
 
 
 #TODO

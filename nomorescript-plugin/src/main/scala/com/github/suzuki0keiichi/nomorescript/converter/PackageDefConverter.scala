@@ -5,7 +5,7 @@ import scala.tools.nsc.SubComponent
 import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptNamespace
 import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptTrees
 
-trait PackageConverter extends ConverterBase with PackageHelper {
+trait PackageDefConverter extends ConverterBase with PackageHelper {
   self: SubComponent =>
 
   import global._

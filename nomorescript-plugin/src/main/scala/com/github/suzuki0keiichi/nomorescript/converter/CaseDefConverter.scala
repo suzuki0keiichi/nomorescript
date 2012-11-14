@@ -30,7 +30,5 @@ trait CaseDefConverter extends ConverterBase {
       case i: Ident =>
         NoMoreScriptIf(NoMoreScriptEmpty(), toTree(caseDef.body, scopedVars, returnValue), NoMoreScriptEmpty())
     }
-    //      NoMoreScriptTrees(
-    //        List(toTree(caseDef.pat, false, None), toTree(caseDef.guard, false, None), toTree(caseDef.body, returnValue, None)), false)
   }
 }

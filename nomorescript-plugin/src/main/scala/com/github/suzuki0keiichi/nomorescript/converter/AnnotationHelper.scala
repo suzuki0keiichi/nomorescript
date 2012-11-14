@@ -7,11 +7,9 @@ trait AnnotationHelper {
 
   import global._
 
-  def haveAnnotation(cdef: ClassDef, name: String): Boolean = {
-    cdef.symbol.annotations.exists(_.toString == name)
-  }
+  def haveAnnotation(cdef: ClassDef, name: String): Boolean = haveAnnotation(cdef.symbol, name)
 
-  def isGlobalClass(typeSymbol: Symbol): Boolean = {
-    typeSymbol.annotations.exists(_.toString == "com.github.suzuki0keiichi.nomorescript.annotation.global")
-  }
+  def haveAnnotation(symbol: Symbol, name: String): Boolean = symbol.annotations.exists(_.toString == name)
+
+  def isGlobalClass(typeSymbol: Symbol): Boolean = haveAnnotation(typeSymbol, "com.github.suzuki0keiichi.nomorescript.annotation.global")
 }

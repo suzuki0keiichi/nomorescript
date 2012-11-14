@@ -9,7 +9,5 @@ trait NewConverter extends ConverterBase {
 
   import global._
 
-  def toNew(nw: New, scopedVars: ScopedVariables, returnValue: Boolean) = {
-    NoMoreScriptNew(toTree(nw.tpt, scopedVars, false))
-  }
+  def convertNew(nw: New, scopedVars: ScopedVariables, returnValue: Boolean) = NoMoreScriptNew(toTree(nw.tpt, scopedVars, false))
 }

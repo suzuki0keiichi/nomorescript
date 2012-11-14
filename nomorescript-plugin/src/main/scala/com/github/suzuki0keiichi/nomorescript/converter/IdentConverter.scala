@@ -10,7 +10,7 @@ trait IdentConverter extends AnnotationHelper with PackageHelper {
 
   import global._
 
-  def toIdent(ident: Ident, scopedVars: ScopedVariables, returnValue: Boolean) = {
+  def convertIdent(ident: Ident, scopedVars: ScopedVariables, returnValue: Boolean) = {
     if (isGlobalClass(ident)) {
       NoMoreScriptEmpty()
     } else {
@@ -27,7 +27,7 @@ trait IdentConverter extends AnnotationHelper with PackageHelper {
     }
   }
 
-  def isGlobalClass(tree: Ident): Boolean = {
+  private def isGlobalClass(tree: Ident): Boolean = {
     isGlobalClass(tree.tpe.typeSymbol)
   }
 }

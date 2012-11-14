@@ -10,11 +10,11 @@ trait DefDefConverter extends ConverterBase with PackageHelper with AnnotationHe
 
   import global._
 
-  def isGlobalClass(ddef: DefDef): Boolean = {
+  private def isGlobalClass(ddef: DefDef): Boolean = {
     isGlobalClass(ddef.symbol.owner.tpe.typeSymbol)
   }
 
-  def toDef(ddef: DefDef, scopedVars: ScopedVariables) = {
+  def convertDefDef(ddef: DefDef, scopedVars: ScopedVariables) = {
     val className = getPackageName(ddef.symbol.owner.owner, null) match {
       case Some(packageName) => packageName + "." + ddef.symbol.owner.name.toString
       case _ => ddef.symbol.owner.name.toString

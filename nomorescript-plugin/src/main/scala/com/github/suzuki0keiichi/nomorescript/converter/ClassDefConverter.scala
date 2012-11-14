@@ -12,15 +12,15 @@ import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptConstructor
 import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptSelect
 import com.github.suzuki0keiichi.nomorescript.trees.NoMoreScriptIdent
 
-trait ClassConverter extends ConverterBase with PackageHelper with AnnotationHelper with ConstructorHelper with TraitHelper with ConvertErrorReporter
+trait ClassDefConverter extends ConverterBase with PackageHelper with AnnotationHelper with ConstructorHelper with TraitHelper with ConvertErrorReporter
   with ValDefConverter with FunctionConverter {
   self: SubComponent =>
 
   import global._
 
-  def toClass(cdef: ClassDef, scopedVars: ScopedVariables): NoMoreScriptTree = {
+  def convertClassDef(cdef: ClassDef, scopedVars: ScopedVariables): NoMoreScriptTree = {
     if (cdef.mods.hasModuleFlag) {
-      toModule(cdef, scopedVars)
+      convertModule(cdef, scopedVars)
     } else {
       if (!isSupportedConstructor(cdef)) {
         addError(cdef.pos, "multi constructor is not supported")
@@ -87,7 +87,7 @@ trait ClassConverter extends ConverterBase with PackageHelper with AnnotationHel
     }
   }
 
-  def toModule(cdef: ClassDef, scopedVars: ScopedVariables) = {
+  private def convertModule(cdef: ClassDef, scopedVars: ScopedVariables) = {
     val global = haveAnnotation(cdef, "com.github.suzuki0keiichi.nomorescript.annotation.global")
     val mock = haveAnnotation(cdef, "com.github.suzuki0keiichi.nomorescript.annotation.mock")
 
@@ -101,7 +101,7 @@ trait ClassConverter extends ConverterBase with PackageHelper with AnnotationHel
     }
   }
 
-  def toConstructor(cdef: ClassDef, scopedVars: ScopedVariables, superTraitNames: List[String]) = {
+  def toConstructor(cdef: ClassDef, scopedVars: ScopedVariables, superTraitNames: List[String]): NoMoreScriptConstructor = {
     val newScopedVars = new ScopedVariables(scopedVars)
     val params: Map[String, String] = cdef.impl.body.collectFirst {
       case ddef: DefDef if (ddef.name.toString.trim() == "<init>") => toParameterNames(ddef.vparamss.head, newScopedVars)

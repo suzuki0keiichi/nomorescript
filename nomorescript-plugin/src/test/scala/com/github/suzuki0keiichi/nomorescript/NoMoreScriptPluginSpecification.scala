@@ -1,15 +1,17 @@
 package com.github.suzuki0keiichi.nomorescript
 
-import org.specs2.mutable.Specification
-import org.junit.runner.RunWith
-import org.specs2.runner.JUnitRunner
-import compiler.TestCompiler
-import scala.io.Source
-import trees._
-import javax.script.ScriptEngineManager
-import scala.collection.mutable.ListBuffer
-import cases._
 import java.io.File
+
+import scala.collection.mutable.ListBuffer
+import scala.io.Source
+
+import org.junit.runner.RunWith
+import org.specs2.mutable.Specification
+import org.specs2.runner.JUnitRunner
+
+import compiler.TestCompiler
+import javax.script.ScriptEngineManager
+import trees._
 
 @RunWith(classOf[JUnitRunner])
 class NoMoreScriptPluginSpecification extends Specification {
@@ -41,15 +43,6 @@ class NoMoreScriptPluginSpecification extends Specification {
     def messages = rawMessages.toList
   }
 
-  class DummyConsole {
-    private val rawMessages = ListBuffer[String]()
-
-    def log(message: String) = {
-      rawMessages += message
-    }
-
-    def messages = rawMessages.toList
-  }
 
   "NoMoreScriptApply" should {
     "0 argument" in {
@@ -163,19 +156,6 @@ class NoMoreScriptPluginSpecification extends Specification {
       engine.eval(src.bufferedReader(), bindings)
 
       console
-  }
-
-  def evalJs(filename: String) = {
-    val manager = new ScriptEngineManager()
-    val engine = manager.getEngineByName("javascript")
-    val src = Source.fromFile(filename)
-    val bindings = engine.createBindings()
-    val console = new DummyConsole()
-
-    bindings.put("console", console)
-    engine.eval(src.bufferedReader(), bindings)
-
-    console
   }
 
   def fileExists(name: String) = {

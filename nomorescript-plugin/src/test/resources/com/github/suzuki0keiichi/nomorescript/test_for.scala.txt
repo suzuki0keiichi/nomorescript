@@ -1,0 +1,33 @@
+package com.github.suzuki0keiichi.nomorescript
+
+import com.github.suzuki0keiichi.nomorescript.annotation.global
+import com.github.suzuki0keiichi.nomorescript.annotation.mock
+
+@mock class Console {
+  def log(message: String) = {}
+}
+
+@mock class GlobalBase {
+  def console: Console = null
+}
+
+@global @mock object Global extends GlobalBase {
+}
+
+import Global._
+
+class Hoge {
+  def abc() = {
+    val i = 10
+    console.log("" + i)
+
+    for (i <- 0 until 10) {
+      defg(i)
+      defg(i + 10)
+    }
+  }
+
+  def defg(num: Int) = {
+    console.log("" + num)
+  }
+}

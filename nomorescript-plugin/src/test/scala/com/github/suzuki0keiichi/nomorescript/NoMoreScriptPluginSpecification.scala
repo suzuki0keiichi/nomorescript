@@ -119,15 +119,24 @@ class NoMoreScriptPluginSpecification extends Specification {
       true
     }
 
-    "test5.scala" in {
-      val reporter = compile("test5.scala.txt", "test5.txt.js")
+    "test_extends.scala" in {
+      val reporter = compile("test_extends.scala.txt", "test_extends.txt.js")
+      if (reporter.infos.size > 0) {
+        (reporter.infos.head.pos + " " + reporter.infos.head.msg) mustEqual ""
+      }
+
+      reporter.hasErrors must beFalse
+    }
+
+    "test_for.scala" in {
+      val reporter = compile("test_for.scala.txt", "test_for.txt.js")
       if (reporter.infos.size > 0) {
         (reporter.infos.head.pos + " " + reporter.infos.head.msg) mustEqual ""
       }
 
       reporter.hasErrors must beFalse
 
-      true
+      diff("test_for.txt.js", "test_for.js")
     }
 
     "test_scopes.scala" in {

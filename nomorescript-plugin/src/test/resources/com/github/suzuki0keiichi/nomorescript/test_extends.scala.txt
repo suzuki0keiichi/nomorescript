@@ -2,15 +2,18 @@ package com.github.suzuki0keiichi.nomorescript
 
 import com.github.suzuki0keiichi.nomorescript.annotation.global
 import com.github.suzuki0keiichi.nomorescript.annotation.mock
-import com.github.suzuki0keiichi.nomorescript.bridge.bridge._
-import com.github.suzuki0keiichi.nomorescript.bridge.JsFunction1
+import collection.mutable.ListBuffer
 
 @mock class Console {
-  def log(message: String) = {}
+  private val _messages = ListBuffer[String]()
+
+  def messages = _messages.toList
+  def log(message: String) = { _messages += message }
+  def clear() = _messages.clear()
 }
 
 @mock class GlobalBase {
-  def console: Console = null
+  lazy val console: Console = new Console()
 }
 
 @global @mock object Global extends GlobalBase {

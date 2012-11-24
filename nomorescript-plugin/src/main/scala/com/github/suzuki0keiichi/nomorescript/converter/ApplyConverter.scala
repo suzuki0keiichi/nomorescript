@@ -19,7 +19,7 @@ trait ApplyConverter extends ConverterBase with SelectConverter with TypeApplyCo
         NoMoreScriptInstanceOf(toTree(select.qualifier, scopedVars, returnValue), aply.args(0).toString)
 
       case typeApply: TypeApply =>
-        toTypeApply(typeApply, scopedVars, returnValue)
+        toTypeApply(typeApply, aply.args, scopedVars, returnValue)
 
       case select: Select =>
         toSetter(aply) match {

@@ -1,5 +1,5 @@
 package sandbox
 
-class NsArrayDef {
+case class NsArrayDef(terminate: Boolean) extends NsEmpty {
 
 }

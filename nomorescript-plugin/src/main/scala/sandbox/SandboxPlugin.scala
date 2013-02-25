@@ -3,9 +3,7 @@ package sandbox
 import tools.nsc.Global
 import tools.nsc.plugins.{PluginComponent, Plugin}
 
-/**
- */
-class SandboxPlugin (val global: Global) extends Plugin {
+class SandboxPlugin(val global: Global) extends Plugin {
   val name: String = "nomorescript"
   val description: String = "scala to javascript convert plugin"
   var srcDir = ""

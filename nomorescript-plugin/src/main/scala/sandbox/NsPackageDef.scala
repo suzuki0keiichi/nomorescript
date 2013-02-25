@@ -1,5 +1,0 @@
-package sandbox
-
-class NsPackageDef {
-
-}

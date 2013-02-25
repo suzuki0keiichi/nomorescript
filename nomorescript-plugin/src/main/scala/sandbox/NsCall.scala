@@ -1,5 +1,5 @@
 package sandbox
 
-class NsCall {
-
+case class NsCall() extends NsEmpty {
+  def toSuperConstructorCall(): NsEmpty = NsEmpty()
 }

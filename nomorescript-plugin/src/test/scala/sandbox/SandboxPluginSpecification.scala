@@ -64,4 +64,5 @@ class SandboxPluginSpecification extends Specification {
 
   "package.scala" in (convertAndDiff("package"))
   "class.scala" in (convertAndDiff("class"))
+  "field.scala" in (convertAndDiff("field"))
 }

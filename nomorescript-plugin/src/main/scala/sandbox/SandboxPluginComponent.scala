@@ -4,7 +4,9 @@ import tools.nsc.plugins.PluginComponent
 import tools.nsc.{Global, Phase}
 import java.io.IOException
 import java.io.File
-import com.github.suzuki0keiichi.nomorescript.converter.PackageHelper
+import scala.Some
+import sandbox.ScopedVariables
+import com.github.suzuki0keiichi.nomorescript.converter.{BaseClasses, PrimitiveTypes}
 
 /**
  * ポリシーとしてはあくまでJavaScript寄りの中間クラスに変換する
@@ -35,6 +37,13 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
 
     def isUserMethod(ddef: DefDef) = true
 
+    def toParameterNames(params: List[ValDef], scopedVar: ScopedVariables): Map[String, String] = {
+      params.map {
+        param =>
+          scopedVar.put(param.name.toString, param.symbol) -> PrimitiveTypes.toPrimitiveType(param.symbol.tpe.toString)
+      }.toMap
+    }
+
     def getPackageName(symbol: Symbol, child: Option[String]): Option[String] = {
       if (symbol.isRoot || symbol.name.toString == "<empty>") {
         child match {
@@ -51,6 +60,15 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
     }
 
     def getPackageName(cdef: ClassDef): Option[String] = getPackageName(cdef.symbol.owner, None)
+
+    def getFullName(cdef: ClassDef): String = {
+      val name = cdef.name.toString
+
+      getPackageName(cdef) match {
+        case Some(packageName) => packageName + "." + name
+        case None => name
+      }
+    }
 
     def hasError = localUnit.get._2
 
@@ -162,14 +180,7 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
     def convertCollectionDef() = {}
 
     def convertClassDef(cdef: ClassDef): NsEmpty = {
-      val name = cdef.name.toString
-
-      val fullName = getPackageName(cdef) match {
-        case Some(packageName) => packageName + "." + name
-        case None => name
-      }
-
-      NsClassDef(fullName, NsConstructorDef(fullName))
+      NsClassDef(getFullName(cdef), convertConstructorDef(cdef))
     }
 
     def convertObjectDef() = {}
@@ -203,7 +214,45 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
 
     def convertOperator() = {}
 
-    def convertConstructorDef() = {}
+    def convertConstructorDef(cdef: ClassDef): NsConstructorDef = {
+      val newScopedVars = new ScopedVariables(null)
+      val params: Map[String, String] = cdef.impl.body.collectFirst {
+        case ddef: DefDef if (ddef.name.toString.trim() == "<init>") => toParameterNames(ddef.vparamss.head, newScopedVars)
+      }.getOrElse(Map[String, String]())
+
+      val memberNames: Map[String, String] = cdef.impl.body.collect {
+        case vdef: ValDef =>
+          vdef.name.toString.trim() -> PrimitiveTypes.toPrimitiveType(vdef.tpt.toString)
+      }.toMap
+
+      val callSuperClass = cdef.impl.body.collectFirst {
+        case ddef: DefDef if (ddef.name.toString == "<init>" && !BaseClasses.isBaseClass(ddef.symbol.enclClass.superClass.name.toString)) =>
+          ddef.rhs match {
+            case b: Block => b.stats.collect {
+              case aply: Apply =>
+                convertTree(aply, newScopedVars, false) match {
+                  case aply: NsCall => aply.toSuperConstructorCall()
+                  case _ => NsEmpty()
+                }
+            }
+
+            case _ => Nil
+          }
+      }.getOrElse(Nil)
+
+//      val callSuperTraits = superTraitNames.map {
+//        name =>
+//          NoMoreScriptApply(NoMoreScriptSelect("call", NoMoreScriptIdent(name, false)), List(NoMoreScriptIdent("this", false)), false, false)
+//      }
+
+      val bodies = cdef.impl.body.filter {
+        case ddef: DefDef => false
+        case tree: Tree => true
+      }.map(convertTree(_, newScopedVars, false))
+
+      // NoMoreScriptConstructor(name, params, memberNames, callSuperClass ++ callSuperTraits ++ bodies)
+      NsConstructorDef(getFullName(cdef))
+    }
 
     def convertPatternMatch() = {}
 

@@ -5,7 +5,7 @@ case class NsConstructorDef(className: String, fields: Map[String, String], para
     List("/**", " * @constructor") :::
       fields.map(field => " * @property {" + field._2 + "} " + field._1).toList :::
       params.map(param => " * @param {" + param._2 + "} " + param._1).toList :::
-      List(" */", className + " = function(" + params.map(param => param._1).mkString(", ") + ") {") :::
+      List(" */", className + " = function (" + params.map(param => param._1).mkString(", ") + ") {") :::
       bodies.flatMap(_.toJs(option)).map(option.indent + _) :::
       List("};", "")
   }

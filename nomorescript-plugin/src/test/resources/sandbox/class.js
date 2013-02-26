@@ -3,6 +3,6 @@ if (!sandbox) sandbox = {};
 /**
  * @constructor
  */
-sandbox.ClassTest = function() {
+sandbox.ClassTest = function () {
 };
 

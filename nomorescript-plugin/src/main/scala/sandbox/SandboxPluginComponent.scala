@@ -136,7 +136,7 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
             NsEmpty()
           }
 
-        case aply: Apply => NsEmpty()
+        case aply: Apply => convertApply(aply)
 
         case block: Block =>
           // 上から代入とかreturnとか修飾子が来てたらそれを最後の評価式につけるだけ
@@ -215,6 +215,7 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
         select.symbol match {
           // 親クラスの関数を指定している場合は参照の場所を変える必要がある
           // traitの場合はprototypeに居ないので更に呼び出し方を変える
+          // TODO:あとでコメント解除
           //          case m: MethodSymbol if (select.name.toString.indexOf("super$") != -1) =>
           //            // TODO:toJsの方でやる
           //            if (m.referenced.enclClass.isTrait) {
@@ -286,7 +287,47 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
       }
     }
 
-    def convertApply(): NsEmpty = {
+    def convertApply(aply: Apply): NsEmpty = {
+      // TODO:あとでコメント解除
+//      aply.fun match {
+//        case select: Select if (select.name.toString == "$isInstanceOf") =>
+//          NoMoreScriptInstanceOf(toTree(select.qualifier, scopedVars, returnValue), aply.args(0).toString)
+//
+//        case typeApply: TypeApply =>
+//          toTypeApply(typeApply, scopedVars, returnValue)
+//
+//        case select: Select =>
+//          toSetter(aply) match {
+//            case Some(setter) =>
+//              NoMoreScriptSetter(setter, toTree(aply.fun.asInstanceOf[Select].qualifier, scopedVars, false), toTree(aply.args(0), scopedVars, false))
+//
+//            case None =>
+//              toGetter(aply, scopedVars, returnValue) match {
+//                case Some(getter) => getter
+//                case None =>
+//                  toOperator(aply) match {
+//                    case Some(operator) =>
+//                      NoMoreScriptOperator(operator, toTree(aply.fun.asInstanceOf[Select].qualifier, scopedVars, false), toTree(aply.args(0), scopedVars, false), returnValue)
+//
+//                    case None =>
+//                      val paramForSuperMethod = select.symbol match {
+//                        case m: MethodSymbol if (select.name.toString.indexOf("super$") != -1) =>
+//                          List(NoMoreScriptThis(false))
+//                        case _ => Nil
+//                      }
+//
+//                      val params = paramForSuperMethod ++ aply.args.map(toTree(_, scopedVars, false))
+//
+//                      NoMoreScriptApply(toSelect(select, scopedVars, false), params, returnValue, isArrayApply(aply))
+//                  }
+//              }
+//          }
+//
+//        case _ =>
+//          val params = aply.args.map(toTree(_, scopedVars, false))
+//
+//          NoMoreScriptApply(toTree(aply.fun, scopedVars, false), params, returnValue, isArrayApply(aply))
+//      }
       NsEmpty()
     }
 
@@ -306,6 +347,7 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
           vdef.name.toString.trim() -> PrimitiveTypes.toPrimitiveType(vdef.tpt.toString)
       }.toMap
 
+      // TODO:あとでコメント解除
       //      val callSuperClass = cdef.impl.body.collectFirst {
       //        case ddef: DefDef if (ddef.name.toString == "<init>" && !BaseClasses.isBaseClass(ddef.symbol.enclClass.superClass.name.toString)) =>
       //          ddef.rhs match {
@@ -319,8 +361,9 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
       //
       //            case _ => Nil
       //          }
-      //      }.getOrElse(Nil)
+      //      }.getOrElse(Nil)e
 
+      // TODO:あとでコメント解除
       //      val callSuperTraits = superTraitNames.map {
       //        name =>
       //          NoMoreScriptApply(NoMoreScriptSelect("call", NoMoreScriptIdent(name, false)), List(NoMoreScriptIdent("this", false)), false, false)
@@ -331,6 +374,7 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
         case tree: Tree => true
       }.map(convertTree(_, scopedVars))
 
+      // TODO:あとでコメント解除
       // NoMoreScriptConstructor(name, params, memberNames, callSuperClass ++ callSuperTraits ++ bodies)
       NsConstructorDef(getFullName(cdef), fields, params, bodies)
     }

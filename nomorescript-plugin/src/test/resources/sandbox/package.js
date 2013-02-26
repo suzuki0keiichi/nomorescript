@@ -3,12 +3,12 @@ if (!sandbox) sandbox = {};
 /**
  * @constructor
  */
-sandbox.PackageTestInSandbox = function() {
+sandbox.PackageTestInSandbox = function () {
 };
 
 /**
  * @constructor
  */
-PackageTestGlobal = function() {
+PackageTestGlobal = function () {
 };
 

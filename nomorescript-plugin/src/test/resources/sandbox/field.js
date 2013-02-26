@@ -7,7 +7,7 @@ if (!sandbox) sandbox = {};
  * @property {string} fieldInClassDefVar
  * @param {number} fieldInConstructor
  */
-sandbox.FieldTest = function(fieldInConstructor) {
+sandbox.FieldTest = function (fieldInConstructor) {
     this.fieldInConstructor = fieldInConstructor;
     this.fieldInClassDefVal = "data";
     this.fieldInClassDefVar = null;

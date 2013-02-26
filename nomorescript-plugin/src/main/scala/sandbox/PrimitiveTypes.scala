@@ -1,4 +1,4 @@
-package com.github.suzuki0keiichi.nomorescript.converter
+package sandbox
 
 object PrimitiveTypes {
   val types = Map("Int" -> "number", "java.lang.String" -> "string", "String" -> "string", "Any" -> "object")

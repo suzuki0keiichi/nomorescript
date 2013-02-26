@@ -3,7 +3,7 @@ package sandbox
 import java.io.File
 import scala.tools.nsc.settings.MutableSettings
 
-case class ConvertOptions(moduleType: ModuleType, srcDirName: String = "", outputDirName: String = ".." + File.separator + "js") {
+case class ConvertOptions(moduleType: ModuleType, srcDirName: String = "", outputDirName: String = ".." + File.separator + "js", indent: String = "    ") {
   def createWriter(currentDir: File, srcFile: File, settings: MutableSettings) = {
     val file = srcFile
     val srcRootDir = {

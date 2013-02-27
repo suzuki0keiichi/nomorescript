@@ -5,6 +5,8 @@ import tools.nsc.{Global, Phase}
 import java.io.IOException
 import java.io.File
 import scala.Some
+import collection.mutable.ListBuffer
+import com.github.suzuki0keiichi.nomorescript.trees.Util
 
 /**
  * ポリシーとしてはあくまでJavaScript寄りの中間クラスに変換する
@@ -92,7 +94,7 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
       val scopedVars = new ScopedVariables(null)
 
       try {
-        val convertedBody: NsEmpty = unit.body match {
+        val convertedBody: List[String] = unit.body match {
           case t: Tree => convertTree(t, scopedVars)
         }
 
@@ -101,7 +103,7 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
           val writer = options.createWriter(currentDir, unit.source.file.file, global.settings)
 
           try {
-            convertedBody.toJs.foreach(writer.println(_))
+            convertedBody.foreach(writer.println(_))
             writer.flush()
           } catch {
             case e: IOException => addError(NoPosition, e.getMessage)
@@ -114,76 +116,76 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
       }
     }
 
-    def convertTree(tree: Tree, scopedVars: ScopedVariables, prefixModifier: NsPrefixModifier = NsPrefixModifier(), postfixModifier: NsPostfixModifier = NsPostfixModifier()): NsEmpty = {
+    def convertTree(tree: Tree, scopedVars: ScopedVariables, prefixModifier: NsPrefixModifier = NsPrefixModifier(), postfixModifier: NsPostfixModifier = NsPostfixModifier()): List[String] = {
       tree match {
         case pdef: PackageDef => convertPackageDef(pdef, scopedVars)
 
         case ths: This =>
           // globalアノテーションがついていた場合のみthisを付けない
-          NsEmpty()
+          Nil
 
         case cdef: ClassDef if (isUserClass(cdef)) => convertClassDef(cdef)
         case vdef: ValDef => convertValDef(vdef, scopedVars)
-        case ddef: DefDef if (isUserMethod(ddef)) => NsEmpty()
-        case fun: Function => NsEmpty()
+        case ddef: DefDef if (isUserMethod(ddef)) => Nil
+        case fun: Function => Nil
 
         case aplyImplicit: ApplyImplicitView =>
           if (isJsFunction(aplyImplicit)) {
             // 第一引数をthisとするfunction
-            NsEmpty()
+            Nil
           } else {
             // 変換関数を挟む
-            NsEmpty()
+            Nil
           }
 
         case aply: Apply => convertApply(aply)
 
         case block: Block =>
           // 上から代入とかreturnとか修飾子が来てたらそれを最後の評価式につけるだけ
-          NsEmpty()
+          Nil
 
-        case m: Match => NsEmpty()
-        case ifBlock: If => NsEmpty()
-        case Try(block, catches, finalizer) => NsEmpty()
+        case m: Match => Nil
+        case ifBlock: If => Nil
+        case Try(block, catches, finalizer) => Nil
         case select: Select => convertSelect(select, scopedVars, prefixModifier, postfixModifier)
         case ident: Ident => convertIdent(ident, scopedVars, prefixModifier)
-        case nw: New => NsEmpty()
+        case nw: New => Nil
         case literal: Literal => convertLiteral(literal, prefixModifier)
         case sper: Super if (!SystemClasses.isSystemClass(sper.symbol.superClass.name.toString)) =>
           // 親クラスを直接指定
-          NsEmpty()
+          Nil
 
-        case t: Throw => NsEmpty()
+        case t: Throw => Nil
 
         case t: Tree =>
           addError(t.pos, "unknown tree type " + t)
-          NsEmpty()
+          Nil
 
       }
     }
 
-    def convertDoWhile(): NsEmpty = {
-      NsEmpty()
+    def convertDoWhile(): List[String] = {
+      Nil
     }
 
-    def convertIfElse(): NsEmpty = {
-      NsEmpty()
+    def convertIfElse(): List[String] = {
+      Nil
     }
 
-    def convertFor(): NsEmpty = {
-      NsEmpty()
+    def convertFor(): List[String] = {
+      Nil
     }
 
-    def convertTryCatchFinally(): NsEmpty = {
-      NsEmpty()
+    def convertTryCatchFinally(): List[String] = {
+      Nil
     }
 
-    def convertBlock(): NsEmpty = {
-      NsEmpty()
+    def convertBlock(): List[String] = {
+      Nil
     }
 
-    def convertCollectionDef(): NsEmpty = {
-      NsEmpty()
+    def convertCollectionDef(): List[String] = {
+      Nil
     }
 
     /**
@@ -192,23 +194,23 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
      * classの時だとclassとしての変換だが、traitは総なめをして自classだけで実装するもののみ実装する
      * 依存クラスもリストアップし、AMDに備える
      */
-    def convertClassDef(cdef: ClassDef): NsEmpty = {
-      NsClassDef(getFullName(cdef), convertConstructorDef(cdef))
+    def convertClassDef(cdef: ClassDef): List[String] = {
+      convertConstructorDef(cdef)
     }
 
-    def convertObjectDef(): NsEmpty = {
-      NsEmpty()
+    def convertObjectDef(): List[String] = {
+      Nil
     }
 
-    def convertTraitDef(): NsEmpty = {
-      NsEmpty()
+    def convertTraitDef(): List[String] = {
+      Nil
     }
 
-    def convertMethodDef(): NsEmpty = {
-      NsEmpty()
+    def convertMethodDef(): List[String] = {
+      Nil
     }
 
-    def convertSelect(select: Select, scopedVars: ScopedVariables, prefixModifier: NsPrefixModifier, postfixModifier: NsPostfixModifier): NsEmpty = {
+    def convertSelect(select: Select, scopedVars: ScopedVariables, prefixModifier: NsPrefixModifier, postfixModifier: NsPostfixModifier): List[String] = {
       if (select.name.toString == "package") {
         convertTree(select.qualifier, scopedVars, prefixModifier, postfixModifier)
       } else {
@@ -227,15 +229,27 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
           //            }
 
           case _ =>
-            NsSelect(scopedVars.getName(select.symbol), convertTree(select.qualifier, scopedVars), prefixModifier, postfixModifier)
+            val childJs = convertTree(select.qualifier, scopedVars)
+            val name = scopedVars.getName(select.symbol)
+
+            val js =
+              if (name == "<init>") {
+                postfixModifier.modify(childJs)
+              } else if (childJs == Nil) {
+                List(postfixModifier.modify(name))
+              } else {
+                postfixModifier.modify(Util.addLast(childJs, "." + name))
+              }
+
+            prefixModifier.modify(js)
         }
 
       }
     }
 
-    def convertIdent(ident: Ident, scopedVars: ScopedVariables, prefixModifier: NsPrefixModifier): NsEmpty = {
+    def convertIdent(ident: Ident, scopedVars: ScopedVariables, prefixModifier: NsPrefixModifier): List[String] = {
       if (isGlobalClass(ident)) {
-        NsEmpty()
+        Nil
       } else {
         val name = if (ident.symbol.isClass) {
           getPackageName(ident.symbol.owner, null) match {
@@ -246,28 +260,40 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
           scopedVars.getName(ident.symbol)
         }
 
-        NsIdent(name, prefixModifier)
+        List(prefixModifier.modify(name))
       }
     }
 
     /**
      * パッケージ宣言とその下に付くクラスひと通り
      */
-    def convertPackageDef(pdef: PackageDef, scopedVars: ScopedVariables): NsEmpty = {
+    def convertPackageDef(pdef: PackageDef, scopedVars: ScopedVariables): List[String] = {
       getPackageName(pdef.symbol, None) match {
-        case Some(name) => NsList(NsNamespaceDef(name) :: pdef.stats.map(convertTree(_, scopedVars)), false)
-        case None => NsList(pdef.stats.map(convertTree(_, scopedVars)), false)
+        case Some(name) =>
+          val js = ListBuffer[String]()
+          val splittedNames = name.split("\\.")
+
+          js.append("if (!" + splittedNames(0) + ") " + splittedNames(0) + " = new ns.Namespace(\"" + splittedNames(0) + "\");")
+          if (splittedNames.size > 1) {
+            js.append(splittedNames(0) + ".add([" + splittedNames.tail.map("\"" + _ + "\"").mkString(", ") + "]);")
+          }
+
+          js.append("")
+          js.toList ::: pdef.stats.flatMap(convertTree(_, scopedVars))
+
+        case None =>
+          pdef.stats.flatMap(convertTree(_, scopedVars))
       }
     }
 
-    def convertImplicit(): NsEmpty = {
-      NsEmpty()
+    def convertImplicit(): List[String] = {
+      Nil
     }
 
     /**
      * メンバかどうかでthisつけるか変わる、代入元がemptyかどうかでnullか変わる
      */
-    def convertValDef(vdef: ValDef, scopedVars: ScopedVariables): NsEmpty = {
+    def convertValDef(vdef: ValDef, scopedVars: ScopedVariables): List[String] = {
       val isMember = vdef.symbol.owner.isInstanceOf[ClassSymbol]
 
       val name = if (isMember) {
@@ -278,64 +304,64 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
 
       if (vdef.rhs.toString.trim() == "<empty>") {
         if (isMember) {
-          NsVariable(name, NsIdent(name), true)
+          List("this." + name + " = " + name + ";")
         } else {
-          NsVariable(name, NsIdent("null"), false)
+          List("var " + name + " = null;")
         }
       } else {
-        NsVariable(name, convertTree(vdef.rhs, scopedVars), isMember)
+        List((if (isMember) "this." else "var ") + name + " = " + convertTree(vdef.rhs, scopedVars).mkString(" ") + ";")
       }
     }
 
-    def convertApply(aply: Apply): NsEmpty = {
+    def convertApply(aply: Apply): List[String] = {
       // TODO:あとでコメント解除
-//      aply.fun match {
-//        case select: Select if (select.name.toString == "$isInstanceOf") =>
-//          NoMoreScriptInstanceOf(toTree(select.qualifier, scopedVars, returnValue), aply.args(0).toString)
-//
-//        case typeApply: TypeApply =>
-//          toTypeApply(typeApply, scopedVars, returnValue)
-//
-//        case select: Select =>
-//          toSetter(aply) match {
-//            case Some(setter) =>
-//              NoMoreScriptSetter(setter, toTree(aply.fun.asInstanceOf[Select].qualifier, scopedVars, false), toTree(aply.args(0), scopedVars, false))
-//
-//            case None =>
-//              toGetter(aply, scopedVars, returnValue) match {
-//                case Some(getter) => getter
-//                case None =>
-//                  toOperator(aply) match {
-//                    case Some(operator) =>
-//                      NoMoreScriptOperator(operator, toTree(aply.fun.asInstanceOf[Select].qualifier, scopedVars, false), toTree(aply.args(0), scopedVars, false), returnValue)
-//
-//                    case None =>
-//                      val paramForSuperMethod = select.symbol match {
-//                        case m: MethodSymbol if (select.name.toString.indexOf("super$") != -1) =>
-//                          List(NoMoreScriptThis(false))
-//                        case _ => Nil
-//                      }
-//
-//                      val params = paramForSuperMethod ++ aply.args.map(toTree(_, scopedVars, false))
-//
-//                      NoMoreScriptApply(toSelect(select, scopedVars, false), params, returnValue, isArrayApply(aply))
-//                  }
-//              }
-//          }
-//
-//        case _ =>
-//          val params = aply.args.map(toTree(_, scopedVars, false))
-//
-//          NoMoreScriptApply(toTree(aply.fun, scopedVars, false), params, returnValue, isArrayApply(aply))
-//      }
-      NsEmpty()
+      //      aply.fun match {
+      //        case select: Select if (select.name.toString == "$isInstanceOf") =>
+      //          NoMoreScriptInstanceOf(toTree(select.qualifier, scopedVars, returnValue), aply.args(0).toString)
+      //
+      //        case typeApply: TypeApply =>
+      //          toTypeApply(typeApply, scopedVars, returnValue)
+      //
+      //        case select: Select =>
+      //          toSetter(aply) match {
+      //            case Some(setter) =>
+      //              NoMoreScriptSetter(setter, toTree(aply.fun.asInstanceOf[Select].qualifier, scopedVars, false), toTree(aply.args(0), scopedVars, false))
+      //
+      //            case None =>
+      //              toGetter(aply, scopedVars, returnValue) match {
+      //                case Some(getter) => getter
+      //                case None =>
+      //                  toOperator(aply) match {
+      //                    case Some(operator) =>
+      //                      NoMoreScriptOperator(operator, toTree(aply.fun.asInstanceOf[Select].qualifier, scopedVars, false), toTree(aply.args(0), scopedVars, false), returnValue)
+      //
+      //                    case None =>
+      //                      val paramForSuperMethod = select.symbol match {
+      //                        case m: MethodSymbol if (select.name.toString.indexOf("super$") != -1) =>
+      //                          List(NoMoreScriptThis(false))
+      //                        case _ => Nil
+      //                      }
+      //
+      //                      val params = paramForSuperMethod ++ aply.args.map(toTree(_, scopedVars, false))
+      //
+      //                      NoMoreScriptApply(toSelect(select, scopedVars, false), params, returnValue, isArrayApply(aply))
+      //                  }
+      //              }
+      //          }
+      //
+      //        case _ =>
+      //          val params = aply.args.map(toTree(_, scopedVars, false))
+      //
+      //          NoMoreScriptApply(toTree(aply.fun, scopedVars, false), params, returnValue, isArrayApply(aply))
+      //      }
+      Nil
     }
 
-    def convertOperator(): NsEmpty = {
-      NsEmpty()
+    def convertOperator(): List[String] = {
+      Nil
     }
 
-    def convertConstructorDef(cdef: ClassDef): NsConstructorDef = {
+    def convertConstructorDef(cdef: ClassDef): List[String] = {
       val scopedVars = new ScopedVariables(null)
 
       val params: Map[String, String] = cdef.impl.body.collectFirst {
@@ -372,27 +398,32 @@ class SandboxPluginComponent(val global: Global, val plugin: SandboxPlugin) exte
       val bodies = cdef.impl.body.filter {
         case ddef: DefDef => false
         case tree: Tree => true
-      }.map(convertTree(_, scopedVars))
+      }.flatMap(convertTree(_, scopedVars))
 
       // TODO:あとでコメント解除
       // NoMoreScriptConstructor(name, params, memberNames, callSuperClass ++ callSuperTraits ++ bodies)
-      NsConstructorDef(getFullName(cdef), fields, params, bodies)
+      List("/**", " * @constructor") :::
+        fields.map(field => " * @property {" + field._2 + "} " + field._1).toList :::
+        params.map(param => " * @param {" + param._2 + "} " + param._1).toList :::
+        List(" */", getFullName(cdef) + " = function (" + params.map(param => param._1).mkString(", ") + ") {") :::
+        bodies.map(options.indent + _) :::
+        List("};", "")
     }
 
-    def convertPatternMatch(): NsEmpty = {
-      NsEmpty()
+    def convertPatternMatch(): List[String] = {
+      Nil
     }
 
-    def convertLiteral(literal: Literal, prefixModifier: NsPrefixModifier): NsEmpty = {
+    def convertLiteral(literal: Literal, prefixModifier: NsPrefixModifier): List[String] = {
       literal.value.value match {
         case s: String =>
-          NsLiteral("\"" + literal.value.value.toString + "\"", prefixModifier)
+          List(prefixModifier.modify("\"" + literal.value.value.toString + "\""))
 
         case _ =>
           if (literal.value.value == null) {
-            NsIdent("null", prefixModifier)
+            List(prefixModifier.modify("null"))
           } else {
-            NsLiteral(literal.value.value.toString, prefixModifier)
+            List(prefixModifier.modify(literal.value.value.toString))
           }
       }
     }
